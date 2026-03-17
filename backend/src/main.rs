@@ -2,12 +2,15 @@
 
 use std::{net::SocketAddr, sync::Arc};
 
+use std::time::Duration;
+
 use hzel_backend::{
     api,
     app_state::AppState,
     auth::{session::{SessionConfig, SessionService}, store::InMemoryAuthStore},
     config::AppConfig,
     db::{self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo, container_repo::PgContainerRepo, pg_auth_store::PgAuthStore},
+    jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
     services::{audit_service::AuditService, command_service::CommandService, container_service::ContainerService},
     ssh_ca::SshCa,
@@ -42,6 +45,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if config.bootstrap_dev_session {
         let seeded = in_memory_store.seed_demo_admin_session().await;
+
+        // Ensure the dev user exists in PostgreSQL so FK constraints
+        // (e.g. container_ownerships.user_id) are satisfied.
+        // If the email already exists, read back its id and patch the in-memory store.
+        let row: Option<(uuid::Uuid,)> = sqlx::query_as(
+            "SELECT id FROM users WHERE email = $1",
+        )
+        .bind(&seeded.user.email)
+        .fetch_optional(&pool)
+        .await
+        .expect("failed to query dev user");
+
+        if let Some((existing_id,)) = row {
+            // Re-key the in-memory session to use the existing PG user id.
+            in_memory_store.patch_user_id(seeded.user.id, existing_id).await;
+            // Also patch the seeded struct so the log below is accurate.
+            // (session lookup still works because we patched the store)
+        } else {
+            sqlx::query(
+                "INSERT INTO users (id, email, role, status, created_at) VALUES ($1, $2, $3, 'active', $4)",
+            )
+            .bind(seeded.user.id)
+            .bind(&seeded.user.email)
+            .bind("admin")
+            .bind(seeded.user.created_at)
+            .execute(&pool)
+            .await
+            .expect("failed to seed dev user into PostgreSQL");
+        }
+
         info!(
             email = %seeded.user.email,
             cookie_name = %session_service.config().cookie_name,
@@ -57,11 +90,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let command_repo: Arc<dyn hzel_backend::db::command_repo::CommandRepo> = Arc::new(PgCommandRepo::new(pool.clone()));
 
     // SSH CA — load if configured, otherwise skip (terminal sessions won't be available).
-    if std::path::Path::new(&config.ssh_ca_private_key_path).exists() {
+    let ssh_ca: Option<Arc<SshCa>> = if std::path::Path::new(&config.ssh_ca_private_key_path).exists() {
         let ca = SshCa::load(&config.ssh_ca_private_key_path)
             .map_err(|e| format!("SSH CA init failed: {}", e.message))?;
         info!(public_key = %ca.public_key_openssh(), "SSH CA loaded");
-    }
+        Some(Arc::new(ca))
+    } else {
+        info!("SSH CA key not found — terminal sessions will be unavailable");
+        None
+    };
 
     // Proxmox client — use real client if API token is configured, otherwise stub.
     let proxmox: Arc<dyn hzel_backend::proxmox::client::ProxmoxClient> =
@@ -76,9 +113,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
     let audit = Arc::new(AuditService::new(audit_repo));
-    let container_service = Arc::new(ContainerService::new(proxmox.clone(), container_repo, audit.clone()));
+    let container_service = Arc::new(ContainerService::new(proxmox.clone(), container_repo.clone(), audit.clone(), ssh_ca));
     let command_service = Arc::new(CommandService::new(command_repo, audit));
     let state = AppState::new(config.clone(), session_service, container_service, command_service);
+
+    // Background state sync — reconcile DB with Proxmox every 30 seconds.
+    let _sync_handle = state_sync::spawn_state_sync(
+        container_repo,
+        proxmox,
+        Duration::from_secs(30),
+    );
 
     let app = api::router::build_router(state);
     let address = SocketAddr::from(([0, 0, 0, 0], config.port));

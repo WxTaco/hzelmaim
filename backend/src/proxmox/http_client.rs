@@ -59,8 +59,24 @@ impl HttpProxmoxClient {
             config.proxmox_api_token_id, config.proxmox_api_token_secret
         );
 
+        // Build default headers — always include auth, optionally CF Access.
+        let mut default_headers = header::HeaderMap::new();
+        if !config.cf_access_client_id.is_empty() {
+            default_headers.insert(
+                header::HeaderName::from_static("cf-access-client-id"),
+                header::HeaderValue::from_str(&config.cf_access_client_id)
+                    .map_err(|e| ApiError::internal(format!("Invalid CF_ACCESS_CLIENT_ID: {e}")))?,
+            );
+            default_headers.insert(
+                header::HeaderName::from_static("cf-access-client-secret"),
+                header::HeaderValue::from_str(&config.cf_access_client_secret)
+                    .map_err(|e| ApiError::internal(format!("Invalid CF_ACCESS_CLIENT_SECRET: {e}")))?,
+            );
+        }
+
         // Proxmox typically uses self-signed certs; accept them.
         let client = Client::builder()
+            .default_headers(default_headers)
             .danger_accept_invalid_certs(true)
             .build()
             .map_err(|e| ApiError::internal(format!("Failed to build HTTP client: {e}")))?;
@@ -131,6 +147,7 @@ impl ProxmoxClient for HttpProxmoxClient {
             ("rootfs".to_string(), format!("local-lvm:{}", request.resource_limits.disk_gb)),
             ("net0".to_string(), format!("name=eth0,bridge=vmbr0,ip=dhcp")),
             ("unprivileged".to_string(), "1".to_string()),
+            ("features".to_string(), "nesting=1".to_string()),
             ("start".to_string(), "1".to_string()),
         ];
 

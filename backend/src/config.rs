@@ -18,6 +18,10 @@ pub struct AppConfig {
     pub proxmox_storage: String,
     pub proxmox_bridge: String,
 
+    // Cloudflare Access (optional, for tunneled Proxmox)
+    pub cf_access_client_id: String,
+    pub cf_access_client_secret: String,
+
     // SSH CA
     pub ssh_ca_private_key_path: String,
 
@@ -40,6 +44,9 @@ impl AppConfig {
             proxmox_template: env::var("PROXMOX_TEMPLATE").unwrap_or_else(|_| "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst".into()),
             proxmox_storage: env::var("PROXMOX_STORAGE").unwrap_or_else(|_| "local-lvm".into()),
             proxmox_bridge: env::var("PROXMOX_BRIDGE").unwrap_or_else(|_| "vmbr0".into()),
+
+            cf_access_client_id: env::var("CF_ACCESS_CLIENT_ID").unwrap_or_default(),
+            cf_access_client_secret: env::var("CF_ACCESS_CLIENT_SECRET").unwrap_or_default(),
 
             ssh_ca_private_key_path: env::var("SSH_CA_PRIVATE_KEY_PATH").unwrap_or_else(|_| "keys/ca".into()),
 

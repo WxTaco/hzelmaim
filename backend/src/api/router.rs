@@ -8,7 +8,7 @@ use crate::{api::routes, app_state::AppState};
 /// Builds the top-level application router.
 pub fn build_router(state: AppState) -> Router {
     Router::new()
-        .nest("/", routes::auth::router())
+        .merge(routes::auth::router())
         .nest("/api/v1/containers", routes::containers::router())
         .nest("/api/v1", routes::commands::router())
         .nest("/api/v1", routes::audit::router())

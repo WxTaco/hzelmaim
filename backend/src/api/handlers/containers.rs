@@ -1,9 +1,21 @@
 //! Container lifecycle handlers.
 
 use axum::{extract::{Path, State}, Json};
+use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{api::response::ApiResponse, app_state::AppState, auth::{context::AuthenticatedUser, csrf::CsrfProtected}, models::container::ContainerRecord, proxmox::types::{ContainerMetrics, CreateContainerRequest}, utils::error::ApiError};
+use crate::{api::response::ApiResponse, app_state::AppState, auth::{context::AuthenticatedUser, csrf::CsrfProtected}, models::container::ContainerRecord, proxmox::types::{ContainerMetrics, CreateContainerRequest, ResourceLimits}, utils::error::ApiError};
+
+/// Simplified API request body for container creation.
+/// Server-side config provides node_name, template, and default resource limits.
+#[derive(Debug, Deserialize)]
+pub struct ApiCreateContainerRequest {
+    pub hostname: String,
+    /// Optional overrides for resource limits.
+    pub cpu_cores: Option<u8>,
+    pub memory_mb: Option<u32>,
+    pub disk_gb: Option<u32>,
+}
 
 /// Returns containers visible to the authenticated actor.
 pub async fn list(State(state): State<AppState>, actor: AuthenticatedUser) -> Result<Json<ApiResponse<Vec<ContainerRecord>>>, ApiError> {
@@ -11,7 +23,18 @@ pub async fn list(State(state): State<AppState>, actor: AuthenticatedUser) -> Re
 }
 
 /// Creates a new secure unprivileged LXC container.
-pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(request): Json<CreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    let request = CreateContainerRequest {
+        node_name: state.config.proxmox_node.clone(),
+        hostname: body.hostname,
+        template: state.config.proxmox_template.clone(),
+        resource_limits: ResourceLimits {
+            cpu_cores: body.cpu_cores.unwrap_or(1),
+            memory_mb: body.memory_mb.unwrap_or(512),
+            disk_gb: body.disk_gb.unwrap_or(8),
+        },
+        ssh_public_keys: vec![],
+    };
     Ok(Json(ApiResponse::new(state.container_service.create(&actor, request).await?)))
 }
 

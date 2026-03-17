@@ -77,6 +77,24 @@ impl InMemoryAuthStore {
 
         SeededAuthSession { user, session }
     }
+
+    /// Re-keys a user and its sessions from `old_id` to `new_id`.
+    ///
+    /// Used when the dev bootstrap discovers the user already exists in
+    /// PostgreSQL with a different UUID.
+    pub async fn patch_user_id(&self, old_id: Uuid, new_id: Uuid) {
+        let mut users = self.users.write().await;
+        if let Some(mut user) = users.remove(&old_id) {
+            user.id = new_id;
+            users.insert(new_id, user);
+        }
+        let mut sessions = self.sessions.write().await;
+        for session in sessions.values_mut() {
+            if session.user_id == old_id {
+                session.user_id = new_id;
+            }
+        }
+    }
 }
 
 #[async_trait]

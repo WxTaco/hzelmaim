@@ -16,6 +16,9 @@ pub trait ContainerRepo: Send + Sync {
     /// Lists containers accessible to a user (via container_ownerships).
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<ContainerRecord>, ApiError>;
 
+    /// Lists all containers (used by background sync).
+    async fn list_all(&self) -> Result<Vec<ContainerRecord>, ApiError>;
+
     /// Loads a container by id.
     async fn get(&self, container_id: Uuid) -> Result<Option<ContainerRecord>, ApiError>;
 
@@ -84,6 +87,17 @@ impl From<ContainerRow> for ContainerRecord {
 
 #[async_trait]
 impl ContainerRepo for PgContainerRepo {
+    async fn list_all(&self) -> Result<Vec<ContainerRecord>, ApiError> {
+        let rows = sqlx::query_as::<_, ContainerRow>(
+            "SELECT id, proxmox_ctid, node_name, name, state, created_at FROM containers ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<ContainerRecord>, ApiError> {
         let rows = sqlx::query_as::<_, ContainerRow>(
             r#"SELECT c.id, c.proxmox_ctid, c.node_name, c.name, c.state, c.created_at
