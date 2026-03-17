@@ -1,0 +1,50 @@
+//! Application configuration types loaded from the environment.
+
+use std::env;
+
+/// Runtime configuration for the backend service.
+#[derive(Debug, Clone)]
+pub struct AppConfig {
+    pub port: u16,
+    pub database_url: String,
+    pub public_base_url: String,
+
+    // Proxmox
+    pub proxmox_api_url: String,
+    pub proxmox_api_token_id: String,
+    pub proxmox_api_token_secret: String,
+    pub proxmox_node: String,
+    pub proxmox_template: String,
+    pub proxmox_storage: String,
+    pub proxmox_bridge: String,
+
+    // SSH CA
+    pub ssh_ca_private_key_path: String,
+
+    pub oidc_enabled: bool,
+    pub bootstrap_dev_session: bool,
+}
+
+impl AppConfig {
+    /// Builds configuration using environment variables with safe defaults for local scaffolding.
+    pub fn from_env() -> Self {
+        Self {
+            port: env::var("PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(8080),
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://hzel:hzel@localhost:5432/hzel".into()),
+            public_base_url: env::var("PUBLIC_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".into()),
+
+            proxmox_api_url: env::var("PROXMOX_API_URL").unwrap_or_else(|_| "https://proxmox.example.internal:8006/api2/json".into()),
+            proxmox_api_token_id: env::var("PROXMOX_API_TOKEN_ID").unwrap_or_else(|_| "root@pam!hzel".into()),
+            proxmox_api_token_secret: env::var("PROXMOX_API_TOKEN_SECRET").unwrap_or_default(),
+            proxmox_node: env::var("PROXMOX_NODE").unwrap_or_else(|_| "pve".into()),
+            proxmox_template: env::var("PROXMOX_TEMPLATE").unwrap_or_else(|_| "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst".into()),
+            proxmox_storage: env::var("PROXMOX_STORAGE").unwrap_or_else(|_| "local-lvm".into()),
+            proxmox_bridge: env::var("PROXMOX_BRIDGE").unwrap_or_else(|_| "vmbr0".into()),
+
+            ssh_ca_private_key_path: env::var("SSH_CA_PRIVATE_KEY_PATH").unwrap_or_else(|_| "keys/ca".into()),
+
+            oidc_enabled: env::var("OIDC_ENABLED").map(|v| v == "true").unwrap_or(false),
+            bootstrap_dev_session: env::var("BOOTSTRAP_DEV_SESSION").map(|v| v == "true").unwrap_or(false),
+        }
+    }
+}

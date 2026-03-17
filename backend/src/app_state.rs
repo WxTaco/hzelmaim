@@ -1,0 +1,26 @@
+//! Shared application state passed into API handlers.
+
+use std::sync::Arc;
+
+use crate::{auth::session::SessionService, config::AppConfig, services::{command_service::CommandService, container_service::ContainerService}};
+
+/// Runtime state shared by API routes.
+#[derive(Clone)]
+pub struct AppState {
+    pub config: Arc<AppConfig>,
+    pub session_service: Arc<SessionService>,
+    pub container_service: Arc<ContainerService>,
+    pub command_service: Arc<CommandService>,
+}
+
+impl AppState {
+    /// Creates a new application state container.
+    pub fn new(
+        config: Arc<AppConfig>,
+        session_service: Arc<SessionService>,
+        container_service: Arc<ContainerService>,
+        command_service: Arc<CommandService>,
+    ) -> Self {
+        Self { config, session_service, container_service, command_service }
+    }
+}

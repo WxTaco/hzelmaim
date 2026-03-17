@@ -1,0 +1,22 @@
+[package]
+name = "hzel-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1"
+axum = { version = "0.8", features = ["ws", "macros"] }
+chrono = { version = "0.4", features = ["serde"] }
+openidconnect = "4.0.1"
+reqwest = { version = "0.13.2", features = ["json", "form"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "migrate"] }
+ssh-key = { version = "0.6.7", features = ["ed25519", "getrandom", "std", "crypto"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "net"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+urlencoding = "2.1.3"
+uuid = { version = "1", features = ["serde", "v4"] }
