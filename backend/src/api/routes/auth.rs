@@ -10,7 +10,7 @@ use crate::{api::handlers::auth, app_state::AppState};
 /// Builds authentication and health routes.
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/healthz", get(auth::health))
+        .route("/api/v1/healthz", get(auth::health))
         .nest(
             "/api/v1/auth",
             Router::new()
