@@ -3,16 +3,16 @@
 use std::sync::Arc;
 
 use chrono::Utc;
+use rand::Rng;
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
     auth::context::AuthenticatedUser,
     db::container_repo::ContainerRepo,
-    models::container::{AccessLevel, ContainerRecord, ContainerState},
+    models::container::{AccessLevel, ContainerRecord, ContainerState, CreateContainerResult},
     proxmox::{client::ProxmoxClient, types::{ContainerMetrics, CreateContainerRequest}},
     services::audit_service::AuditService,
-    ssh_ca::SshCa,
     utils::error::ApiError,
 };
 
@@ -21,8 +21,6 @@ pub struct ContainerService {
     proxmox: Arc<dyn ProxmoxClient>,
     containers: Arc<dyn ContainerRepo>,
     audit: Arc<AuditService>,
-    /// SSH CA used to inject the CA public key into new containers.
-    ssh_ca: Option<Arc<SshCa>>,
 }
 
 impl ContainerService {
@@ -31,9 +29,8 @@ impl ContainerService {
         proxmox: Arc<dyn ProxmoxClient>,
         containers: Arc<dyn ContainerRepo>,
         audit: Arc<AuditService>,
-        ssh_ca: Option<Arc<SshCa>>,
     ) -> Self {
-        Self { proxmox, containers, audit, ssh_ca }
+        Self { proxmox, containers, audit }
     }
 
     /// Lists containers visible to the current actor.
@@ -49,15 +46,16 @@ impl ContainerService {
         Ok(container)
     }
 
-    /// Creates a container after validating secure platform defaults.
+    /// Creates a container with a randomly generated root password.
     ///
-    /// The CA public key is automatically appended to `ssh_public_keys` so
-    /// the container trusts certificates signed by the platform CA.
-    pub async fn create(&self, actor: &AuthenticatedUser, request: CreateContainerRequest) -> Result<ContainerRecord, ApiError> {
-        // NOTE: The SSH CA public key is NOT injected into ssh_public_keys here.
-        // It belongs in /etc/ssh/trusted_ca_keys on the container (TrustedUserCAKeys),
-        // not in ~/.ssh/authorized_keys. That setup will be done post-provisioning.
-
+    /// The container template is expected to have `openssh-server` installed,
+    /// sshd enabled, and `TrustedUserCAKeys /etc/ssh/trusted_ca_keys.pub`
+    /// already configured so that ephemeral CA-signed certificates from
+    /// [`crate::services::terminal_service::TerminalService`] are accepted.
+    ///
+    /// After the container starts, a random root password is set via the
+    /// Proxmox API and returned to the caller (it is **not** persisted).
+    pub async fn create(&self, actor: &AuthenticatedUser, request: CreateContainerRequest) -> Result<CreateContainerResult, ApiError> {
         let node_name = request.node_name.clone();
         let hostname = request.hostname.clone();
         let ctid = self.proxmox.create_container(request).await?;
@@ -73,10 +71,22 @@ impl ContainerService {
         self.containers.create(&record, actor.user_id).await?;
         self.audit.log_success(Some(actor.user_id), Some(record.id), "container.create").await;
 
+        // Generate a random password for the container root user.
+        let password = generate_password(24);
+        let mut password_set = false;
+
         // Attempt to start the container and transition to Running.
         match self.proxmox.start_container(ctid).await {
             Ok(()) => {
                 self.containers.update_state(record.id, ContainerState::Running).await?;
+
+                // Set the root password via the Proxmox API.
+                match self.proxmox.set_container_password(ctid, &password).await {
+                    Ok(()) => { password_set = true; }
+                    Err(e) => {
+                        warn!(ctid, error = %e.message, "failed to set container root password");
+                    }
+                }
             }
             Err(e) => {
                 warn!(ctid, error = %e.message, "failed to auto-start container after creation");
@@ -85,8 +95,13 @@ impl ContainerService {
         }
 
         // Re-fetch to return the updated state.
-        self.containers.get(record.id).await?
-            .ok_or_else(|| ApiError::internal("container disappeared after creation"))
+        let container = self.containers.get(record.id).await?
+            .ok_or_else(|| ApiError::internal("container disappeared after creation"))?;
+
+        Ok(CreateContainerResult {
+            container,
+            initial_password: if password_set { Some(password) } else { None },
+        })
     }
 
     /// Starts a container after ownership is validated.
@@ -146,4 +161,17 @@ impl ContainerService {
         }
         Ok(())
     }
+}
+
+
+/// Generates a cryptographically random alphanumeric password of the given length.
+fn generate_password(len: usize) -> String {
+    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let mut rng = rand::rng();
+    (0..len)
+        .map(|_| {
+            let idx = rng.random_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
 }

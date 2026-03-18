@@ -4,7 +4,7 @@ use axum::{extract::{Path, State}, Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{api::response::ApiResponse, app_state::AppState, auth::{context::AuthenticatedUser, csrf::CsrfProtected}, models::container::ContainerRecord, proxmox::types::{ContainerMetrics, CreateContainerRequest, ResourceLimits}, utils::error::ApiError};
+use crate::{api::response::ApiResponse, app_state::AppState, auth::{context::AuthenticatedUser, csrf::CsrfProtected}, models::container::{ContainerRecord, CreateContainerResult}, proxmox::types::{ContainerMetrics, CreateContainerRequest, ResourceLimits}, utils::error::ApiError};
 
 /// Simplified API request body for container creation.
 /// Server-side config provides node_name, template, and default resource limits.
@@ -23,11 +23,11 @@ pub async fn list(State(state): State<AppState>, actor: AuthenticatedUser) -> Re
 }
 
 /// Creates a new secure unprivileged LXC container.
-pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<CreateContainerResult>>, ApiError> {
     let request = CreateContainerRequest {
         node_name: state.config.proxmox_node.clone(),
         hostname: body.hostname,
-        template: state.config.proxmox_template.clone(),
+        template_ctid: state.config.proxmox_template_ctid,
         resource_limits: ResourceLimits {
             cpu_cores: body.cpu_cores.unwrap_or(1),
             memory_mb: body.memory_mb.unwrap_or(512),

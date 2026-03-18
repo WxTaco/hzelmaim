@@ -135,42 +135,56 @@ impl ProxmoxClient for HttpProxmoxClient {
             .parse()
             .map_err(|e| ApiError::internal(format!("Invalid VMID: {e}")))?;
 
-        let ssh_keys = request.ssh_public_keys.join("\n");
-        let ssh_keys_encoded = urlencoding::encode(&ssh_keys);
-
-        let mut params = vec![
-            ("vmid".to_string(), vmid.to_string()),
-            ("ostemplate".to_string(), request.template),
+        // Clone from the template container.
+        let params = vec![
+            ("newid".to_string(), vmid.to_string()),
             ("hostname".to_string(), request.hostname),
-            ("cores".to_string(), request.resource_limits.cpu_cores.to_string()),
-            ("memory".to_string(), request.resource_limits.memory_mb.to_string()),
-            ("rootfs".to_string(), format!("local-lvm:{}", request.resource_limits.disk_gb)),
-            ("net0".to_string(), format!("name=eth0,bridge=vmbr0,ip=dhcp")),
-            ("unprivileged".to_string(), "1".to_string()),
-            ("features".to_string(), "nesting=1".to_string()),
-            ("start".to_string(), "1".to_string()),
+            ("full".to_string(), "1".to_string()),
         ];
 
-        if !ssh_keys.is_empty() {
-            params.push(("ssh-public-keys".to_string(), ssh_keys_encoded.into_owned()));
-        }
-
-        let url = self.node_url("/lxc");
+        // Apply resource limits after clone via a config update.
+        let clone_url = self.node_url(&format!("/lxc/{}/clone", request.template_ctid));
         let resp = self
             .client
-            .post(&url)
+            .post(&clone_url)
             .header(header::AUTHORIZATION, &self.auth_header)
             .form(&params)
             .send()
             .await
-            .map_err(|e| ApiError::internal(format!("Proxmox create failed: {e}")))?;
+            .map_err(|e| ApiError::internal(format!("Proxmox clone failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox create error: {body}")));
+            return Err(ApiError::internal(format!("Proxmox clone error: {body}")));
         }
 
-        info!(vmid, "proxmox container created");
+        // Wait for the clone task to finish by polling the container config.
+        self.wait_for_container(vmid, 60).await?;
+
+        // Apply resource limits and network config to the cloned container.
+        let config_params = vec![
+            ("cores".to_string(), request.resource_limits.cpu_cores.to_string()),
+            ("memory".to_string(), request.resource_limits.memory_mb.to_string()),
+            ("rootfs".to_string(), format!("local-lvm:{}", request.resource_limits.disk_gb)),
+            ("net0".to_string(), "name=eth0,bridge=vmbr0,ip=dhcp".to_string()),
+        ];
+
+        let config_url = self.node_url(&format!("/lxc/{vmid}/config"));
+        let config_resp = self
+            .client
+            .put(&config_url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&config_params)
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox config update failed: {e}")))?;
+
+        if !config_resp.status().is_success() {
+            let body = config_resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!("Proxmox config update error: {body}")));
+        }
+
+        info!(vmid, "proxmox container cloned and configured");
         Ok(vmid)
     }
 
@@ -278,5 +292,57 @@ impl ProxmoxClient for HttpProxmoxClient {
         }
 
         Err(ApiError::internal(format!("No IPv4 address found for container {ctid}")))
+    }
+
+    async fn set_container_password(&self, ctid: i32, password: &str) -> Result<(), ApiError> {
+        let url = self.node_url(&format!("/lxc/{ctid}/config"));
+        let resp = self
+            .client
+            .put(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&[("password", password)])
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox set password failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!("Proxmox set password error: {body}")));
+        }
+
+        info!(ctid, "container root password set");
+        Ok(())
+    }
+}
+
+
+impl HttpProxmoxClient {
+    /// Polls until the container config is available (i.e. the clone task has
+    /// finished) or `timeout_secs` elapses.
+    async fn wait_for_container(&self, ctid: i32, timeout_secs: u64) -> Result<(), ApiError> {
+        let deadline = tokio::time::Instant::now()
+            + std::time::Duration::from_secs(timeout_secs);
+
+        loop {
+            let url = self.node_url(&format!("/lxc/{ctid}/config"));
+            let resp = self
+                .client
+                .get(&url)
+                .header(header::AUTHORIZATION, &self.auth_header)
+                .send()
+                .await;
+
+            match resp {
+                Ok(r) if r.status().is_success() => return Ok(()),
+                _ if tokio::time::Instant::now() < deadline => {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+                _ => {
+                    return Err(ApiError::internal(format!(
+                        "Container {ctid} not ready within {timeout_secs}s after clone"
+                    )));
+                }
+            }
+        }
     }
 }

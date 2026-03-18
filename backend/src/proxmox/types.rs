@@ -15,7 +15,8 @@ pub struct ResourceLimits {
 pub struct CreateContainerRequest {
     pub node_name: String,
     pub hostname: String,
-    pub template: String,
+    /// Proxmox CT ID of the template container to clone from (e.g. 1000).
+    pub template_ctid: i32,
     pub resource_limits: ResourceLimits,
     /// SSH public keys injected into the container at creation (OpenSSH format).
     #[serde(default)]

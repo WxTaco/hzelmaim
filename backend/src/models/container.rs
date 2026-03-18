@@ -42,3 +42,14 @@ pub struct ContainerRecord {
     pub state: ContainerState,
     pub created_at: DateTime<Utc>,
 }
+
+/// Returned from container creation — includes the container record and a
+/// one-time initial root password that the user should save.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateContainerResult {
+    #[serde(flatten)]
+    pub container: ContainerRecord,
+    /// The randomly generated root password. Only returned once at creation
+    /// time — the backend does not persist it.
+    pub initial_password: Option<String>,
+}

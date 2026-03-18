@@ -3,3 +3,4 @@
 pub mod audit_service;
 pub mod command_service;
 pub mod container_service;
+pub mod terminal_service;

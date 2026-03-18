@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::{auth::session::SessionService, config::AppConfig, services::{command_service::CommandService, container_service::ContainerService}};
+use crate::{auth::session::SessionService, config::AppConfig, services::{command_service::CommandService, container_service::ContainerService, terminal_service::TerminalService}};
 
 /// Runtime state shared by API routes.
 #[derive(Clone)]
@@ -11,6 +11,7 @@ pub struct AppState {
     pub session_service: Arc<SessionService>,
     pub container_service: Arc<ContainerService>,
     pub command_service: Arc<CommandService>,
+    pub terminal_service: Arc<TerminalService>,
 }
 
 impl AppState {
@@ -20,7 +21,8 @@ impl AppState {
         session_service: Arc<SessionService>,
         container_service: Arc<ContainerService>,
         command_service: Arc<CommandService>,
+        terminal_service: Arc<TerminalService>,
     ) -> Self {
-        Self { config, session_service, container_service, command_service }
+        Self { config, session_service, container_service, command_service, terminal_service }
     }
 }

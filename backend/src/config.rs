@@ -14,7 +14,8 @@ pub struct AppConfig {
     pub proxmox_api_token_id: String,
     pub proxmox_api_token_secret: String,
     pub proxmox_node: String,
-    pub proxmox_template: String,
+    /// Proxmox CT ID of the template container to clone from.
+    pub proxmox_template_ctid: i32,
     pub proxmox_storage: String,
     pub proxmox_bridge: String,
 
@@ -24,6 +25,10 @@ pub struct AppConfig {
 
     // SSH CA
     pub ssh_ca_private_key_path: String,
+
+    // SSH terminal session defaults
+    pub ssh_user: String,
+    pub ssh_port: u16,
 
     pub oidc_enabled: bool,
     pub bootstrap_dev_session: bool,
@@ -41,7 +46,7 @@ impl AppConfig {
             proxmox_api_token_id: env::var("PROXMOX_API_TOKEN_ID").unwrap_or_else(|_| "root@pam!hzel".into()),
             proxmox_api_token_secret: env::var("PROXMOX_API_TOKEN_SECRET").unwrap_or_default(),
             proxmox_node: env::var("PROXMOX_NODE").unwrap_or_else(|_| "pve".into()),
-            proxmox_template: env::var("PROXMOX_TEMPLATE").unwrap_or_else(|_| "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst".into()),
+            proxmox_template_ctid: env::var("PROXMOX_TEMPLATE_CTID").ok().and_then(|v| v.parse().ok()).unwrap_or(1000),
             proxmox_storage: env::var("PROXMOX_STORAGE").unwrap_or_else(|_| "local-lvm".into()),
             proxmox_bridge: env::var("PROXMOX_BRIDGE").unwrap_or_else(|_| "vmbr0".into()),
 
@@ -49,6 +54,9 @@ impl AppConfig {
             cf_access_client_secret: env::var("CF_ACCESS_CLIENT_SECRET").unwrap_or_default(),
 
             ssh_ca_private_key_path: env::var("SSH_CA_PRIVATE_KEY_PATH").unwrap_or_else(|_| "keys/ca".into()),
+
+            ssh_user: env::var("SSH_USER").unwrap_or_else(|_| "root".into()),
+            ssh_port: env::var("SSH_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(22),
 
             oidc_enabled: env::var("OIDC_ENABLED").map(|v| v == "true").unwrap_or(false),
             bootstrap_dev_session: env::var("BOOTSTRAP_DEV_SESSION").map(|v| v == "true").unwrap_or(false),

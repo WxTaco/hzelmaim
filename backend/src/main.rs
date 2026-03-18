@@ -12,7 +12,7 @@ use hzel_backend::{
     db::{self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo, container_repo::PgContainerRepo, pg_auth_store::PgAuthStore},
     jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
-    services::{audit_service::AuditService, command_service::CommandService, container_service::ContainerService},
+    services::{audit_service::AuditService, command_service::CommandService, container_service::ContainerService, terminal_service::TerminalService},
     ssh_ca::SshCa,
     utils::logging::init_tracing,
 };
@@ -113,9 +113,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
     let audit = Arc::new(AuditService::new(audit_repo));
-    let container_service = Arc::new(ContainerService::new(proxmox.clone(), container_repo.clone(), audit.clone(), ssh_ca));
+    let container_service = Arc::new(ContainerService::new(proxmox.clone(), container_repo.clone(), audit.clone()));
     let command_service = Arc::new(CommandService::new(command_repo, audit));
-    let state = AppState::new(config.clone(), session_service, container_service, command_service);
+
+    // Terminal service — requires SSH CA; if unavailable, sessions will error at runtime.
+    let terminal_service = Arc::new(TerminalService::new(proxmox.clone(), ssh_ca, config.clone()));
+
+    let state = AppState::new(config.clone(), session_service, container_service, command_service, terminal_service);
 
     // Background state sync — reconcile DB with Proxmox every 30 seconds.
     let _sync_handle = state_sync::spawn_state_sync(
