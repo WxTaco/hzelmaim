@@ -133,12 +133,16 @@ async fn handle_terminal(
     // Spawn the SSH bridge in a background task.
     let terminal_service = state.terminal_service.clone();
     let user_id = user.user_id;
+    let error_tx = server_tx.clone();
     let bridge_handle = tokio::spawn(async move {
         if let Err(e) = terminal_service
             .open_session(user_id, ctid, cols, rows, client_rx, server_tx)
             .await
         {
             error!(error = %e.message, "terminal SSH session failed");
+            let _ = error_tx
+                .send(TerminalStreamEvent::Error { message: e.message })
+                .await;
         }
     });
 

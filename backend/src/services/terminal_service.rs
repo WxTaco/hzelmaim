@@ -9,6 +9,9 @@ use tokio::sync::mpsc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
+const IP_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(2);
+const IP_POLL_ATTEMPTS: u32 = 15; // up to 30 s
+
 use crate::{
     config::AppConfig,
     jobs::terminal::{TerminalClientMsg, TerminalStreamEvent},
@@ -71,7 +74,23 @@ impl TerminalService {
         server_tx: mpsc::Sender<TerminalStreamEvent>,
     ) -> Result<(), ApiError> {
         // 1. Resolve the container IP via Proxmox.
-        let ip = self.proxmox.get_container_ip(ctid).await?;
+        //    The container may have just started and DHCP may not have
+        //    assigned an address yet — poll until one appears.
+        let ip = {
+            let mut last_err = ApiError::internal(format!("No IPv4 address found for container {ctid}"));
+            let mut found = None;
+            for attempt in 1..=IP_POLL_ATTEMPTS {
+                match self.proxmox.get_container_ip(ctid).await {
+                    Ok(addr) => { found = Some(addr); break; }
+                    Err(e) => {
+                        warn!(ctid, attempt, "waiting for container IP: {}", e.message);
+                        last_err = e;
+                        tokio::time::sleep(IP_POLL_INTERVAL).await;
+                    }
+                }
+            }
+            found.ok_or(last_err)?
+        };
         let addr = format!("{}:{}", ip, self.config.ssh_port);
 
         // 2. Issue an ephemeral certificate (300 s validity).
