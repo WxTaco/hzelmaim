@@ -62,16 +62,18 @@ pub async fn oidc_callback(
 
     let session = oidc.handle_callback(&params.code, &params.state).await?;
 
-    let cookie_name = &state.session_service.config().cookie_name;
-    let max_age = state.session_service.config().max_age_seconds;
+    let config = state.session_service.config();
+    let cookie_name = &config.cookie_name;
+    let max_age = config.max_age_seconds;
+    let secure_flag = if config.secure_cookies { "Secure; " } else { "" };
     let cookie = format!(
-        "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}",
-        cookie_name, session.id, max_age
+        "{}={}; Path=/; {}HttpOnly; SameSite=Lax; Max-Age={}",
+        cookie_name, session.id, secure_flag, max_age
     );
 
     Ok(Response::builder()
         .status(StatusCode::TEMPORARY_REDIRECT)
-        .header(header::LOCATION, "/")
+        .header(header::LOCATION, "/dashboard")
         .header(header::SET_COOKIE, cookie)
         .body(axum::body::Body::empty())
         .unwrap()

@@ -10,25 +10,30 @@ import { ReactNode } from 'react';
  */
 interface CardProps {
   /** Card title */
-  title: string;
+  title?: string;
   /** Optional subtitle displayed below the title */
   subtitle?: string;
   /** Card content */
   children: ReactNode;
+  /** Optional CSS class for additional styling */
+  className?: string;
 }
 
 /**
  * Card component for displaying grouped content.
- * Renders a styled panel with title, optional subtitle, and flexible content area.
+ * Implements Vercel-inspired design with subtle borders, minimal shadows, and smooth transitions.
+ * Renders a styled panel with optional title, subtitle, and flexible content area.
  */
-export function Card({ title, subtitle, children }: CardProps): React.ReactElement {
+export function Card({ title, subtitle, children, className = '' }: CardProps): React.ReactElement {
   return (
-    <section className="rounded-xl border border-slate-800 bg-panel p-5 shadow-lg shadow-black/20">
+    <section className={`rounded-lg border border-vercel-border bg-vercel-card p-6 transition-all duration-200 hover:border-vercel-border/80 hover:shadow-vercel-md ${className}`}>
       {/* Card header with title and optional subtitle */}
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
-      </header>
+      {title && (
+        <header className="mb-6">
+          <h2 className="text-sm font-semibold text-vercel-text">{title}</h2>
+          {subtitle && <p className="mt-2 text-xs text-vercel-muted">{subtitle}</p>}
+        </header>
+      )}
       {/* Card content area */}
       {children}
     </section>

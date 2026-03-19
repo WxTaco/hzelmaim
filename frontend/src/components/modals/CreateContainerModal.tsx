@@ -57,21 +57,21 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
 
   if (result) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6">
-          <h2 className="text-lg font-bold text-white">Container Created</h2>
-          <p className="mt-2 text-sm text-slate-400">Your container has been created successfully.</p>
-          
-          <div className="mt-4 space-y-3 rounded-lg bg-slate-900 p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+        <div className="w-full max-w-md rounded-lg border border-vercel-border bg-vercel-card p-6">
+          <h2 className="text-lg font-bold text-vercel-text">Container Created</h2>
+          <p className="mt-2 text-sm text-vercel-muted">Your container has been created successfully.</p>
+
+          <div className="mt-6 space-y-4 rounded-lg border border-vercel-border bg-vercel-surface p-4">
             <div>
-              <p className="text-xs text-slate-500">Container Name</p>
-              <p className="font-mono text-sm text-slate-200">{result.name}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-vercel-muted">Container Name</p>
+              <p className="mt-2 font-mono text-sm text-vercel-text">{result.name}</p>
             </div>
             {result.initial_password && (
-              <div>
-                <p className="text-xs text-slate-500">Initial Root Password</p>
-                <p className="font-mono text-sm text-emerald-300">{result.initial_password}</p>
-                <p className="mt-1 text-xs text-slate-500">Save this password securely. It will not be shown again.</p>
+              <div className="border-t border-vercel-border pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-vercel-muted">Initial Root Password</p>
+                <p className="mt-2 font-mono text-sm text-vercel-accent">{result.initial_password}</p>
+                <p className="mt-3 text-xs text-vercel-muted">Save this password securely. It will not be shown again.</p>
               </div>
             )}
           </div>
@@ -81,7 +81,7 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
               onSuccess(result);
               onClose();
             }}
-            className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+            className="mt-6 w-full rounded-lg bg-vercel-accent px-4 py-2.5 text-sm font-semibold text-vercel-bg transition-all duration-200 hover:bg-emerald-600 hover:shadow-vercel-md"
           >
             Done
           </button>
@@ -91,41 +91,41 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6">
-        <h2 className="text-lg font-bold text-white">Create Container</h2>
-        <p className="mt-1 text-sm text-slate-400">Configure a new LXC container.</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+      <div className="w-full max-w-md rounded-lg border border-vercel-border bg-vercel-card p-6">
+        <h2 className="text-lg font-bold text-vercel-text">Create Container</h2>
+        <p className="mt-2 text-sm text-vercel-muted">Configure a new LXC container.</p>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300">{error}</div>
+          <div className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300">Hostname</label>
+            <label className="block text-sm font-semibold text-vercel-text">Hostname</label>
             <input
               type="text"
               value={hostname}
               onChange={(e) => setHostname(e.target.value)}
               placeholder="e.g., web-server-01"
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              className="mt-2 w-full rounded-lg border border-vercel-border bg-vercel-surface px-3 py-2 text-sm text-vercel-text placeholder-vercel-muted focus:border-vercel-accent focus:outline-none transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300">CPU Cores</label>
+              <label className="block text-sm font-semibold text-vercel-text">CPU Cores</label>
               <input
                 type="number"
                 min="1"
                 max="16"
                 value={cpuCores}
                 onChange={(e) => setCpuCores(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-vercel-border bg-vercel-surface px-3 py-2 text-sm text-vercel-text focus:border-vercel-accent focus:outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300">Memory (MB)</label>
+              <label className="block text-sm font-semibold text-vercel-text">Memory (MB)</label>
               <input
                 type="number"
                 min="256"
@@ -133,18 +133,18 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
                 step="256"
                 value={memoryMb}
                 onChange={(e) => setMemoryMb(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-vercel-border bg-vercel-surface px-3 py-2 text-sm text-vercel-text focus:border-vercel-accent focus:outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300">Disk (GB)</label>
+              <label className="block text-sm font-semibold text-vercel-text">Disk (GB)</label>
               <input
                 type="number"
                 min="1"
                 max="1000"
                 value={diskGb}
                 onChange={(e) => setDiskGb(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-vercel-border bg-vercel-surface px-3 py-2 text-sm text-vercel-text focus:border-vercel-accent focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -153,14 +153,14 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-900"
+              className="flex-1 rounded-lg border border-vercel-border bg-vercel-surface px-4 py-2.5 text-sm font-semibold text-vercel-text transition-all duration-200 hover:border-vercel-accent hover:bg-vercel-card"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 hover:bg-emerald-700"
+              className="flex-1 rounded-lg bg-vercel-accent px-4 py-2.5 text-sm font-semibold text-vercel-bg transition-all duration-200 disabled:opacity-50 hover:bg-emerald-600 hover:shadow-vercel-md"
             >
               {loading ? 'Creating…' : 'Create'}
             </button>

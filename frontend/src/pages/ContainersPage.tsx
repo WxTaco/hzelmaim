@@ -1,6 +1,6 @@
 /**
- * Container inventory and management page.
- * Displays all containers accessible to the authenticated user with live API data.
+ * Container inventory and management page with Vercel-inspired design.
+ * Displays all containers with live API data and create functionality.
  */
 
 import { useEffect, useState } from 'react';
@@ -33,69 +33,71 @@ export function ContainersPage(): React.ReactElement {
 
   const handleCreateSuccess = (result: CreateContainerResult) => {
     setShowCreateModal(false);
-    // Reload containers list
     get<ContainerSummary[]>('/api/v1/containers')
       .then(setContainers)
       .catch(console.error);
   };
 
   return (
-    <>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Page header with create button */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Containers</h2>
-          <p className="text-sm text-slate-400">Create, inspect, and operate on LXC containers.</p>
+          <h2 className="text-2xl font-bold text-vercel-text">Containers</h2>
+          <p className="mt-2 text-sm text-vercel-muted">Create, inspect, and operate on LXC containers.</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+          className="rounded-lg bg-vercel-accent px-6 py-2.5 text-sm font-semibold text-vercel-bg transition-all duration-200 hover:bg-emerald-600 hover:shadow-vercel-md"
         >
           + Create Container
         </button>
       </div>
 
-      <Card title="" subtitle="">
+      {/* Container list card */}
+      <Card>
         {loading && (
-          <p className="py-6 text-center text-sm text-slate-600">Loading containers…</p>
+          <p className="py-12 text-center text-sm text-vercel-muted">Loading containers…</p>
         )}
         {error && (
-          <p className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300">{error}</p>
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
+            {error}
+          </div>
         )}
         {!loading && !error && containers.length === 0 && (
-          <p className="py-6 text-center text-sm text-slate-600">No containers yet. Create one to get started.</p>
+          <p className="py-12 text-center text-sm text-vercel-muted">
+            No containers yet. <button onClick={() => setShowCreateModal(true)} className="text-vercel-accent hover:underline">Create one</button> to get started.
+          </p>
         )}
         {!loading && !error && containers.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {containers.map((container) => (
-              <div
+              <Link
                 key={container.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 p-3 transition hover:border-slate-700 hover:bg-slate-900/30"
+                to={`/containers/${container.id}`}
+                className="flex items-center justify-between rounded-lg border border-vercel-border bg-vercel-surface p-4 transition-all duration-200 hover:border-vercel-accent/50 hover:bg-vercel-card hover:shadow-vercel-md"
               >
-                <div>
-                  <p className="font-medium text-white">{container.name}</p>
-                  <p className="text-sm text-slate-400">Node {container.node_name}</p>
+                <div className="flex-1">
+                  <p className="font-medium text-vercel-text">{container.name}</p>
+                  <p className="mt-1 text-xs text-vercel-muted">Node {container.node_name}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <StatusBadge status={container.state} />
-                  <Link
-                    className="text-sm text-emerald-300 transition hover:text-emerald-200"
-                    to={`/containers/${container.id}`}
-                  >
-                    Open →
-                  </Link>
+                  <span className="text-vercel-muted transition-colors group-hover:text-vercel-accent">→</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
       </Card>
 
+      {/* Create container modal */}
       {showCreateModal && (
         <CreateContainerModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateSuccess}
         />
       )}
-    </>
+    </div>
   );
 }

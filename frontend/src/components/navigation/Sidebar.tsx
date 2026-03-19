@@ -33,23 +33,23 @@ const navItems: NavItem[] = [
  */
 export function Sidebar(): React.ReactElement {
   return (
-    <aside className="w-full max-w-64 border-r border-slate-800 bg-slate-950/80 p-4">
+    <aside className="w-full max-w-64 border-r border-vercel-border bg-vercel-surface p-6">
       {/* Branding section */}
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">HZEL</p>
-        <h1 className="text-xl font-bold text-white">Control Plane</h1>
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-vercel-muted">HZEL</p>
+        <h1 className="mt-2 text-lg font-bold text-vercel-text">Control Plane</h1>
       </div>
       {/* Navigation links */}
-      <nav className="space-y-2">
+      <nav className="space-y-1">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `block rounded-lg px-3 py-2 text-sm transition ${
+              `block rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-300 hover:bg-slate-900'
+                  ? 'bg-vercel-accent text-vercel-bg'
+                  : 'text-vercel-muted hover:text-vercel-text hover:bg-vercel-card'
               }`
             }
           >

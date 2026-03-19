@@ -69,7 +69,7 @@ export function ContainerDetailPage(): React.ReactElement {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <p className="text-slate-400">Loading container…</p>
+        <p className="text-vercel-muted">Loading container…</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function ContainerDetailPage(): React.ReactElement {
         <p className="text-sm text-rose-300">{error || 'Container not found'}</p>
         <button
           onClick={() => navigate('/containers')}
-          className="mt-4 rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-700"
+          className="mt-4 rounded-lg border border-vercel-border bg-vercel-surface px-4 py-2 text-sm font-medium text-vercel-text transition-all duration-200 hover:border-vercel-accent hover:bg-vercel-card"
         >
           Back to containers
         </button>
@@ -89,42 +89,42 @@ export function ContainerDetailPage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header with container name and status */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">{container.name}</h2>
-          <p className="mt-1 text-sm text-slate-400">ID: {container.id}</p>
+          <h2 className="text-2xl font-bold text-vercel-text">{container.name}</h2>
+          <p className="mt-2 text-sm text-vercel-muted">ID: {container.id}</p>
         </div>
         <StatusBadge status={container.state} />
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300">{actionError}</div>
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{actionError}</div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Lifecycle Actions */}
         <Card title="Lifecycle Actions" subtitle="Start, stop, and restart operations.">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <button
               onClick={() => handleAction('start')}
               disabled={actionLoading || container.state === 'running'}
-              className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 hover:bg-emerald-700"
+              className="w-full rounded-lg bg-vercel-accent px-4 py-2.5 text-sm font-semibold text-vercel-bg transition-all duration-200 disabled:opacity-50 hover:bg-emerald-600 hover:shadow-vercel-md"
             >
               {actionLoading ? 'Processing…' : 'Start'}
             </button>
             <button
               onClick={() => handleAction('stop')}
               disabled={actionLoading || container.state === 'stopped'}
-              className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 hover:bg-amber-700"
+              className="w-full rounded-lg border border-vercel-border bg-vercel-surface px-4 py-2.5 text-sm font-semibold text-vercel-text transition-all duration-200 disabled:opacity-50 hover:border-amber-500/50 hover:bg-vercel-card hover:text-amber-400"
             >
               {actionLoading ? 'Processing…' : 'Stop'}
             </button>
             <button
               onClick={() => handleAction('restart')}
               disabled={actionLoading || container.state !== 'running'}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 hover:bg-blue-700"
+              className="w-full rounded-lg border border-vercel-border bg-vercel-surface px-4 py-2.5 text-sm font-semibold text-vercel-text transition-all duration-200 disabled:opacity-50 hover:border-blue-500/50 hover:bg-vercel-card hover:text-blue-400"
             >
               {actionLoading ? 'Processing…' : 'Restart'}
             </button>
@@ -133,22 +133,22 @@ export function ContainerDetailPage(): React.ReactElement {
 
         {/* Container Info */}
         <Card title="Configuration" subtitle="Container details and resource allocation.">
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Proxmox CTID</dt>
-              <dd className="font-mono text-slate-200">{container.proxmox_ctid}</dd>
+          <dl className="space-y-4 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-vercel-muted">Proxmox CTID</dt>
+              <dd className="font-mono text-vercel-text">{container.proxmox_ctid}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Node</dt>
-              <dd className="text-slate-200">{container.node_name}</dd>
+            <div className="flex items-center justify-between">
+              <dt className="text-vercel-muted">Node</dt>
+              <dd className="text-vercel-text">{container.node_name}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Created</dt>
-              <dd className="text-slate-200">{new Date(container.created_at).toLocaleDateString()}</dd>
+            <div className="flex items-center justify-between">
+              <dt className="text-vercel-muted">Created</dt>
+              <dd className="text-vercel-text">{new Date(container.created_at).toLocaleDateString()}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">State</dt>
-              <dd className="capitalize text-slate-200">{container.state}</dd>
+            <div className="flex items-center justify-between">
+              <dt className="text-vercel-muted">State</dt>
+              <dd className="capitalize text-vercel-text">{container.state}</dd>
             </div>
           </dl>
         </Card>
@@ -156,24 +156,24 @@ export function ContainerDetailPage(): React.ReactElement {
         {/* Metrics */}
         {metrics && (
           <Card title="Metrics" subtitle="Real-time resource usage.">
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-slate-500">CPU Usage</dt>
-                <dd className="font-mono text-slate-200">{metrics.cpu_percent.toFixed(1)}%</dd>
+            <dl className="space-y-4 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-vercel-muted">CPU Usage</dt>
+                <dd className="font-mono text-vercel-text">{metrics.cpu_percent.toFixed(1)}%</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Memory</dt>
-                <dd className="font-mono text-slate-200">
+              <div className="flex items-center justify-between">
+                <dt className="text-vercel-muted">Memory</dt>
+                <dd className="font-mono text-vercel-text">
                   {metrics.memory_used_mb} / {metrics.memory_limit_mb} MB
                 </dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Network RX</dt>
-                <dd className="font-mono text-slate-200">{(metrics.network_rx_bytes / 1024 / 1024).toFixed(2)} MB</dd>
+              <div className="flex items-center justify-between">
+                <dt className="text-vercel-muted">Network RX</dt>
+                <dd className="font-mono text-vercel-text">{(metrics.network_rx_bytes / 1024 / 1024).toFixed(2)} MB</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Network TX</dt>
-                <dd className="font-mono text-slate-200">{(metrics.network_tx_bytes / 1024 / 1024).toFixed(2)} MB</dd>
+              <div className="flex items-center justify-between">
+                <dt className="text-vercel-muted">Network TX</dt>
+                <dd className="font-mono text-vercel-text">{(metrics.network_tx_bytes / 1024 / 1024).toFixed(2)} MB</dd>
               </div>
             </dl>
           </Card>
@@ -181,7 +181,7 @@ export function ContainerDetailPage(): React.ReactElement {
 
         {/* Tunnel Info */}
         <Card title="Cloudflare Tunnel" subtitle="Future SSH exposure and session policy.">
-          <p className="text-sm text-slate-300">Tunnel provisioning and access policies will be represented here.</p>
+          <p className="text-sm text-vercel-muted">Tunnel provisioning and access policies will be represented here.</p>
         </Card>
       </div>
     </div>
