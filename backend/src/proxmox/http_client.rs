@@ -21,6 +21,7 @@ pub struct HttpProxmoxClient {
     base_url: String,
     node: String,
     auth_header: String,
+    storage: String,
 }
 
 /// Generic Proxmox API response wrapper.
@@ -86,6 +87,7 @@ impl HttpProxmoxClient {
             base_url: config.proxmox_api_url.trim_end_matches('/').to_string(),
             node: config.proxmox_node.clone(),
             auth_header,
+            storage: config.proxmox_storage.clone(),
         })
     }
 
@@ -140,6 +142,7 @@ impl ProxmoxClient for HttpProxmoxClient {
             ("newid".to_string(), vmid.to_string()),
             ("hostname".to_string(), request.hostname),
             ("full".to_string(), "1".to_string()),
+            ("storage".to_string(), self.storage.clone()),
         ];
 
         // Apply resource limits after clone via a config update.
@@ -165,7 +168,7 @@ impl ProxmoxClient for HttpProxmoxClient {
         let config_params = vec![
             ("cores".to_string(), request.resource_limits.cpu_cores.to_string()),
             ("memory".to_string(), request.resource_limits.memory_mb.to_string()),
-            ("rootfs".to_string(), format!("local-lvm:{}", request.resource_limits.disk_gb)),
+            ("rootfs".to_string(), format!("{}:{}", self.storage, request.resource_limits.disk_gb)),
             ("net0".to_string(), "name=eth0,bridge=vmbr0,ip=dhcp".to_string()),
         ];
 
