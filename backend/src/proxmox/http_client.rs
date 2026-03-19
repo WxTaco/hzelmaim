@@ -55,6 +55,14 @@ struct NextIdResponse {
     data: String,
 }
 
+/// Task status payload from `/nodes/{node}/tasks/{upid}/status`.
+#[derive(Deserialize, Debug)]
+struct TaskStatus {
+    status: String,
+    #[serde(default)]
+    exitstatus: Option<String>,
+}
+
 impl HttpProxmoxClient {
     /// Creates a new Proxmox client from app config.
     pub fn new(config: &AppConfig) -> Result<Self, ApiError> {
@@ -170,10 +178,16 @@ impl ProxmoxClient for HttpProxmoxClient {
             return Err(ApiError::internal(format!("Proxmox clone error: {clone_body}")));
         }
 
-        // Wait for the clone task to finish by polling the container config.
-        info!(vmid, "waiting for cloned container config to become available");
-        self.wait_for_container(vmid, 60).await?;
-        info!(vmid, "container config is available, applying resource limits");
+        // Parse the UPID from the clone response and wait for the task to finish.
+        // Polling the task API is the only reliable way to know the clone (and its
+        // disk lock on the template + create lock on the new CT) is truly done.
+        let upid = serde_json::from_str::<serde_json::Value>(&clone_body)
+            .ok()
+            .and_then(|v| v["data"].as_str().map(|s| s.to_string()))
+            .ok_or_else(|| ApiError::internal("Clone response contained no UPID".to_string()))?;
+        info!(vmid, %upid, "clone task started, waiting for completion via task API");
+        self.wait_for_task(&upid, 120).await?;
+        info!(vmid, "clone task complete, applying resource limits");
 
         // Apply CPU, memory, and network config to the cloned container.
         let config_params = vec![
@@ -399,14 +413,25 @@ impl HttpProxmoxClient {
         }
     }
 
-    /// Polls until the container config is available (i.e. the clone task has
-    /// finished) or `timeout_secs` elapses.
-    async fn wait_for_container(&self, ctid: i32, timeout_secs: u64) -> Result<(), ApiError> {
-        let deadline = tokio::time::Instant::now()
-            + std::time::Duration::from_secs(timeout_secs);
+    /// Polls the Proxmox task API until the task reports `stopped` with exitstatus
+    /// `OK`, or until `timeout_secs` elapses. The UPID encodes the node name
+    /// (second colon-delimited field), so no separate node parameter is needed.
+    async fn wait_for_task(&self, upid: &str, timeout_secs: u64) -> Result<(), ApiError> {
+        // UPID format: UPID:{node}:{pid}:{pstart}:{starttime}:{type}:{id}:{user}:
+        let node = upid
+            .split(':')
+            .nth(1)
+            .ok_or_else(|| ApiError::internal(format!("Cannot parse node from UPID: {upid}")))?;
+
+        let url = format!(
+            "{}/nodes/{}/tasks/{}/status",
+            self.base_url,
+            node,
+            urlencoding::encode(upid)
+        );
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(timeout_secs);
 
         loop {
-            let url = self.node_url(&format!("/lxc/{ctid}/config"));
             let resp = self
                 .client
                 .get(&url)
@@ -415,16 +440,51 @@ impl HttpProxmoxClient {
                 .await;
 
             match resp {
-                Ok(r) if r.status().is_success() => return Ok(()),
-                _ if tokio::time::Instant::now() < deadline => {
-                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<PveResponse<TaskStatus>>().await {
+                        Ok(parsed) => {
+                            info!(
+                                upid,
+                                task_status = %parsed.data.status,
+                                exitstatus = ?parsed.data.exitstatus,
+                                "task poll"
+                            );
+                            if parsed.data.status == "stopped" {
+                                match parsed.data.exitstatus.as_deref() {
+                                    Some("OK") => return Ok(()),
+                                    Some(e) => {
+                                        return Err(ApiError::internal(format!(
+                                            "Proxmox task failed: {e}"
+                                        )))
+                                    }
+                                    None => {
+                                        return Err(ApiError::internal(
+                                            "Proxmox task stopped with no exitstatus".to_string(),
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            info!(%e, "failed to parse task status response, retrying");
+                        }
+                    }
                 }
-                _ => {
-                    return Err(ApiError::internal(format!(
-                        "Container {ctid} not ready within {timeout_secs}s after clone"
-                    )));
+                Ok(r) => {
+                    let status = r.status();
+                    info!(%status, "task status endpoint returned non-2xx, retrying");
+                }
+                Err(e) => {
+                    info!(%e, "task status request error, retrying");
                 }
             }
+
+            if tokio::time::Instant::now() >= deadline {
+                return Err(ApiError::internal(format!(
+                    "Proxmox task {upid} did not complete within {timeout_secs}s"
+                )));
+            }
+            tokio::time::sleep(Duration::from_secs(3)).await;
         }
     }
 }
