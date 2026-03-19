@@ -37,6 +37,9 @@ pub struct AppConfig {
     pub oidc_client_secret: String,
     pub oidc_redirect_uri: String,
 
+    // JWT
+    pub jwt_secret: String,
+
     pub bootstrap_dev_session: bool,
 }
 
@@ -72,6 +75,7 @@ impl AppConfig {
                 let base = env::var("PUBLIC_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".into());
                 format!("{}/api/v1/auth/oidc/callback", base)
             }),
+            jwt_secret: env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-in-production".into()),
             bootstrap_dev_session: env::var("BOOTSTRAP_DEV_SESSION").map(|v| v == "true").unwrap_or(false),
         }
     }

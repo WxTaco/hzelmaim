@@ -7,7 +7,7 @@ use std::time::Duration;
 use hzel_backend::{
     api,
     app_state::AppState,
-    auth::{oidc::OidcService, session::{SessionConfig, SessionService}, store::InMemoryAuthStore},
+    auth::{jwt::JwtService, oidc::OidcService, session::{SessionConfig, SessionService}, store::InMemoryAuthStore},
     config::AppConfig,
     db::{self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo, container_repo::PgContainerRepo, pg_auth_store::PgAuthStore, user_repo::PgUserRepo},
     jobs::state_sync,
@@ -88,6 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audit_repo: Arc<dyn hzel_backend::db::audit_repo::AuditRepo> = Arc::new(PgAuditRepo::new(pool.clone()));
     let container_repo: Arc<dyn hzel_backend::db::container_repo::ContainerRepo> = Arc::new(PgContainerRepo::new(pool.clone()));
     let command_repo: Arc<dyn hzel_backend::db::command_repo::CommandRepo> = Arc::new(PgCommandRepo::new(pool.clone()));
+    let user_repo: Arc<dyn hzel_backend::db::user_repo::UserRepo> = Arc::new(PgUserRepo::new(pool.clone()));
 
     // SSH CA — load if configured, otherwise skip (terminal sessions won't be available).
     let ssh_ca: Option<Arc<SshCa>> = if std::path::Path::new(&config.ssh_ca_private_key_path).exists() {
@@ -132,7 +133,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let state = AppState::new(config.clone(), session_service, container_service, command_service, terminal_service, oidc_service);
+    // JWT service for token-based authentication
+    let jwt_service = Arc::new(JwtService::new(config.jwt_secret.clone()));
+
+    let state = AppState::new(config.clone(), session_service, jwt_service, container_service, command_service, terminal_service, user_repo, oidc_service);
 
     // Background state sync — reconcile DB with Proxmox every 30 seconds.
     let _sync_handle = state_sync::spawn_state_sync(

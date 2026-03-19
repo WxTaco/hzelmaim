@@ -2,6 +2,7 @@
 
 pub mod context;
 pub mod csrf;
+pub mod jwt;
 pub mod oidc;
 pub mod session;
 pub mod store;

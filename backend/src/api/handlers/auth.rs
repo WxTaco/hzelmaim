@@ -50,11 +50,11 @@ pub struct OidcCallbackParams {
 }
 
 /// Handles the OIDC provider callback, exchanges the code, creates a session,
-/// and redirects to the frontend with a session cookie.
+/// and redirects to frontend with JWT tokens in URL.
 pub async fn oidc_callback(
     State(state): State<AppState>,
     Query(params): Query<OidcCallbackParams>,
-) -> Result<Response, ApiError> {
+) -> Result<Redirect, ApiError> {
     let oidc = state
         .oidc_service
         .as_ref()
@@ -62,22 +62,81 @@ pub async fn oidc_callback(
 
     let session = oidc.handle_callback(&params.code, &params.state).await?;
 
-    let config = state.session_service.config();
-    let cookie_name = &config.cookie_name;
-    let max_age = config.max_age_seconds;
-    let secure_flag = if config.secure_cookies { "Secure; " } else { "" };
-    let cookie = format!(
-        "{}={}; Path=/; {}HttpOnly; SameSite=Lax; Max-Age={}",
-        cookie_name, session.id, secure_flag, max_age
+    // Fetch user to get email
+    let user = state
+        .user_repo
+        .get(session.user_id)
+        .await?
+        .ok_or_else(|| ApiError::unauthorized())?;
+
+    // Generate JWT tokens
+    let access_token = state.jwt_service.generate_access_token(
+        session.user_id,
+        user.email.clone(),
+        session.id,
+    )?;
+
+    let refresh_token = state.jwt_service.generate_refresh_token(session.user_id, session.id)?;
+
+    // Redirect to frontend callback handler with tokens in URL
+    let callback_url = format!(
+        "{}/auth/callback?access_token={}&refresh_token={}",
+        state.config.public_base_url.trim_end_matches('/'),
+        urlencoding::encode(&access_token),
+        urlencoding::encode(&refresh_token),
     );
 
-    Ok(Response::builder()
-        .status(StatusCode::TEMPORARY_REDIRECT)
-        .header(header::LOCATION, "/dashboard")
-        .header(header::SET_COOKIE, cookie)
-        .body(axum::body::Body::empty())
-        .unwrap()
-        .into_response())
+    Ok(Redirect::to(&callback_url))
+}
+
+/// Refresh token endpoint - exchanges a refresh token for a new access token.
+#[derive(Debug, Deserialize)]
+pub struct RefreshTokenRequest {
+    pub refresh_token: String,
+}
+
+pub async fn refresh_token(
+    State(state): State<AppState>,
+    Json(body): Json<RefreshTokenRequest>,
+) -> Result<Json<ApiResponse<TokenResponse>>, ApiError> {
+    let claims = state.jwt_service.validate_refresh_token(&body.refresh_token)?;
+
+    // Get user from database to verify they still exist and are active
+    let user_id = uuid::Uuid::parse_str(&claims.sub)
+        .map_err(|_| ApiError::unauthorized())?;
+    let session_id = uuid::Uuid::parse_str(&claims.session_id)
+        .map_err(|_| ApiError::unauthorized())?;
+
+    // Fetch user to get email
+    let user = state
+        .user_repo
+        .get(user_id)
+        .await?
+        .ok_or_else(|| ApiError::unauthorized())?;
+
+    // Generate new access token
+    let access_token = state.jwt_service.generate_access_token(
+        user_id,
+        user.email,
+        session_id,
+    )?;
+
+    Ok(Json(ApiResponse::new(TokenResponse {
+        access_token,
+        refresh_token: body.refresh_token, // Return the same refresh token
+        token_type: "Bearer".to_string(),
+        expires_in: 900, // 15 minutes
+    })))
+}
+
+/// Get current authenticated user info.
+pub async fn me(user: AuthenticatedUser) -> Json<ApiResponse<UserInfoResponse>> {
+    Json(ApiResponse::new(UserInfoResponse {
+        user_id: user.user_id.to_string(),
+        email: user.email,
+        role: user.role,
+        auth_method: user.auth_method,
+    }))
 }
 
 /// Session logout endpoint.
@@ -118,5 +177,23 @@ pub struct SessionDetails {
     pub session_id: uuid::Uuid,
     pub csrf_token: String,
     pub expires_at: DateTime<Utc>,
+    pub auth_method: AuthMethod,
+}
+
+/// JWT token response for cross-domain authentication.
+#[derive(Debug, Clone, Serialize)]
+pub struct TokenResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub token_type: String,
+    pub expires_in: i64,
+}
+
+/// Current user information response.
+#[derive(Debug, Clone, Serialize)]
+pub struct UserInfoResponse {
+    pub user_id: String,
+    pub email: String,
+    pub role: crate::models::user::UserRole,
     pub auth_method: AuthMethod,
 }

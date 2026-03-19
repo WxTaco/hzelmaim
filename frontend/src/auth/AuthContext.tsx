@@ -1,10 +1,10 @@
 /**
  * React context for authentication state.
- * Checks the session endpoint on mount and provides user info + login/logout helpers.
+ * Manages JWT tokens and provides user info + login/logout helpers.
  */
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { get, post, setCsrfToken, ApiError } from '../api/client';
+import { get, post, setAccessToken, setRefreshToken, getRefreshToken, ApiError } from '../api/client';
 
 export interface AuthUser {
   user_id: string;
@@ -13,19 +13,18 @@ export interface AuthUser {
   auth_method: 'session' | 'oidc';
 }
 
-interface SessionResponse {
-  user: AuthUser;
-  session: {
-    session_id: string;
-    csrf_token: string;
-    expires_at: string;
-    auth_method: string;
-  };
-  policy: {
-    cookie_name: string;
-    max_age_seconds: number;
-  };
-  oidc_enabled: boolean;
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+interface UserInfoResponse {
+  user_id: string;
+  email: string;
+  role: 'admin' | 'user';
+  auth_method: 'session' | 'oidc';
 }
 
 interface AuthContextValue {
@@ -46,17 +45,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const session = await get<SessionResponse>('/api/v1/auth/session');
-      setUser(session.user);
-      setCsrfToken(session.session.csrf_token);
-      setOidcEnabled(session.oidc_enabled);
+      // Try to refresh token if we have a refresh token
+      const storedRefreshToken = getRefreshToken();
+      if (storedRefreshToken) {
+        const tokenResponse = await post<TokenResponse>('/api/v1/auth/refresh', {
+          refresh_token: storedRefreshToken,
+        });
+        setAccessToken(tokenResponse.access_token);
+        setRefreshToken(tokenResponse.refresh_token);
+
+        // Fetch user info from /api/v1/auth/me endpoint
+        const userInfo = await get<UserInfoResponse>('/api/v1/auth/me');
+        setUser({
+          user_id: userInfo.user_id,
+          email: userInfo.email,
+          role: userInfo.role,
+          auth_method: userInfo.auth_method,
+        });
+      } else {
+        setUser(null);
+        setAccessToken(null);
+      }
     } catch (err) {
       setUser(null);
-      setCsrfToken(null);
+      setAccessToken(null);
+      setRefreshToken(null);
       if (err instanceof ApiError && err.status === 401) {
         // Not authenticated — that's fine
       } else {
-        console.error('Session check failed:', err);
+        console.error('Token refresh failed:', err);
       }
     } finally {
       setLoading(false);
@@ -67,6 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  // Set up automatic token refresh before expiration
+  useEffect(() => {
+    if (!user) return;
+
+    // Refresh token 1 minute before it expires (access token is 15 minutes)
+    const refreshInterval = setInterval(() => {
+      refresh();
+    }, 14 * 60 * 1000); // 14 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [user, refresh]);
+
   const login = useCallback(() => {
     // Redirect to the OIDC authorize endpoint which does a 302 to the IdP.
     window.location.href = '/api/v1/auth/oidc/authorize';
@@ -74,12 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await post('/api/v1/auth/logout');
+      await post('/api/v1/auth/logout', {});
     } catch {
       // ignore — session may already be gone
     }
     setUser(null);
-    setCsrfToken(null);
+    setAccessToken(null);
+    setRefreshToken(null);
   }, []);
 
   return (

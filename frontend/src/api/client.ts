@@ -1,6 +1,6 @@
 /**
  * Fetch wrapper for the backend API.
- * Sends session cookies automatically and handles CSRF tokens.
+ * Sends JWT access token in Authorization header for cross-domain authentication.
  */
 
 import type { ApiResponse, ApiErrorResponse } from '../types/api';
@@ -12,24 +12,39 @@ class ApiError extends Error {
   }
 }
 
-let csrfToken: string | null = null;
+let accessToken: string | null = null;
+let refreshToken: string | null = null;
 
-/** Store the CSRF token obtained from the session endpoint. */
-export function setCsrfToken(token: string | null) {
-  csrfToken = token;
+/** Store the access token obtained from OIDC callback or refresh. */
+export function setAccessToken(token: string | null) {
+  accessToken = token;
 }
 
-/** Generic fetch wrapper that includes credentials and CSRF headers. */
+/** Store the refresh token for token renewal. */
+export function setRefreshToken(token: string | null) {
+  refreshToken = token;
+  if (token) {
+    localStorage.setItem('refresh_token', token);
+  } else {
+    localStorage.removeItem('refresh_token');
+  }
+}
+
+/** Retrieve the refresh token from localStorage. */
+export function getRefreshToken(): string | null {
+  return localStorage.getItem('refresh_token');
+}
+
+/** Generic fetch wrapper that includes JWT access token in Authorization header. */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // Attach CSRF token for mutating requests.
-  const method = (options.method || 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'HEAD' && csrfToken) {
-    headers['x-csrf-token'] = csrfToken;
+  // Attach JWT access token for authenticated requests.
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
   // Attach content-type for requests with body.
@@ -40,7 +55,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...options,
     headers,
-    credentials: 'same-origin',
   });
 
   if (!res.ok) {

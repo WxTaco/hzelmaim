@@ -34,6 +34,7 @@ import { TrustPage } from './pages/TrustPage';
 import { SystemPage } from './pages/SystemPage';
 import { LoginPage } from './pages/LoginPage';
 import { TerminalPage } from './pages/TerminalPage';
+import { OidcCallbackPage } from './pages/OidcCallbackPage';
 
 /** Thin wrapper that injects an AppShell with a title around a page. */
 function ShellPage({ title, children }: { title: string; children: ReactElement }) {
@@ -50,8 +51,9 @@ export default function App() {
       <Route path="/trust"        element={<TrustPage />} />
       <Route path="/system"       element={<SystemPage />} />
 
-      {/* ── Auth route ──────────────────────────────────────────────── */}
+      {/* ── Auth routes ──────────────────────────────────────────────── */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<OidcCallbackPage />} />
 
       {/* ── Authenticated app routes (AppShell + RequireAuth) ────────── */}
       <Route path="/dashboard"  element={<RequireAuth><ShellPage title="Dashboard"><DashboardPage /></ShellPage></RequireAuth>} />
