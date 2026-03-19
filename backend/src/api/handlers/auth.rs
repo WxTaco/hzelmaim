@@ -27,7 +27,9 @@ pub async fn health() -> Json<ApiResponse<&'static str>> {
 
 /// Placeholder login endpoint reserved for future OIDC and session bootstrap.
 pub async fn login() -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    Err(ApiError::not_implemented("Use /api/v1/auth/oidc/authorize for login"))
+    Err(ApiError::not_implemented(
+        "Use /api/v1/auth/oidc/authorize for login",
+    ))
 }
 
 /// Redirects the user agent to the OIDC provider's authorization endpoint.
@@ -69,13 +71,14 @@ pub async fn oidc_callback(
         .ok_or_else(|| ApiError::unauthorized())?;
 
     // Generate JWT tokens
-    let access_token = state.jwt_service.generate_access_token(
-        session.user_id,
-        user.email.clone(),
-        session.id,
-    )?;
+    let access_token =
+        state
+            .jwt_service
+            .generate_access_token(session.user_id, user.email.clone(), session.id)?;
 
-    let refresh_token = state.jwt_service.generate_refresh_token(session.user_id, session.id)?;
+    let refresh_token = state
+        .jwt_service
+        .generate_refresh_token(session.user_id, session.id)?;
 
     // Redirect to frontend callback handler with tokens in URL
     let callback_url = format!(
@@ -98,13 +101,14 @@ pub async fn refresh_token(
     State(state): State<AppState>,
     Json(body): Json<RefreshTokenRequest>,
 ) -> Result<Json<ApiResponse<TokenResponse>>, ApiError> {
-    let claims = state.jwt_service.validate_refresh_token(&body.refresh_token)?;
+    let claims = state
+        .jwt_service
+        .validate_refresh_token(&body.refresh_token)?;
 
     // Get user from database to verify they still exist and are active
-    let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| ApiError::unauthorized())?;
-    let session_id = uuid::Uuid::parse_str(&claims.session_id)
-        .map_err(|_| ApiError::unauthorized())?;
+    let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| ApiError::unauthorized())?;
+    let session_id =
+        uuid::Uuid::parse_str(&claims.session_id).map_err(|_| ApiError::unauthorized())?;
 
     // Fetch user to get email
     let user = state
@@ -114,11 +118,9 @@ pub async fn refresh_token(
         .ok_or_else(|| ApiError::unauthorized())?;
 
     // Generate new access token
-    let access_token = state.jwt_service.generate_access_token(
-        user_id,
-        user.email,
-        session_id,
-    )?;
+    let access_token = state
+        .jwt_service
+        .generate_access_token(user_id, user.email, session_id)?;
 
     Ok(Json(ApiResponse::new(TokenResponse {
         access_token,
@@ -139,14 +141,28 @@ pub async fn me(user: AuthenticatedUser) -> Json<ApiResponse<UserInfoResponse>> 
 }
 
 /// Session logout endpoint.
-pub async fn logout(_csrf: CsrfProtected, State(state): State<AppState>, session: AuthenticatedSession) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    state.session_service.revoke_session(session.user.session_id).await?;
+pub async fn logout(
+    _csrf: CsrfProtected,
+    State(state): State<AppState>,
+    session: AuthenticatedSession,
+) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
+    state
+        .session_service
+        .revoke_session(session.user.session_id)
+        .await?;
     Ok(Json(ApiResponse::new("logged_out")))
 }
 
 /// Returns the currently authenticated session context.
-pub async fn session(State(state): State<AppState>, session: AuthenticatedSession) -> Json<ApiResponse<SessionView>> {
-    let AuthenticatedSession { user, csrf_token, expires_at } = session;
+pub async fn session(
+    State(state): State<AppState>,
+    session: AuthenticatedSession,
+) -> Json<ApiResponse<SessionView>> {
+    let AuthenticatedSession {
+        user,
+        csrf_token,
+        expires_at,
+    } = session;
 
     Json(ApiResponse::new(SessionView {
         user: user.clone(),

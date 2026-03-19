@@ -76,7 +76,10 @@ impl InMemoryAuthStore {
         };
 
         self.users.write().await.insert(user.id, user.clone());
-        self.sessions.write().await.insert(session.id, session.clone());
+        self.sessions
+            .write()
+            .await
+            .insert(session.id, session.clone());
 
         SeededAuthSession { user, session }
     }
@@ -125,7 +128,10 @@ impl AuthStore for InMemoryAuthStore {
     }
 
     async fn create_session(&self, session: &SessionRecord) -> Result<(), ApiError> {
-        self.sessions.write().await.insert(session.id, session.clone());
+        self.sessions
+            .write()
+            .await
+            .insert(session.id, session.clone());
         Ok(())
     }
 }

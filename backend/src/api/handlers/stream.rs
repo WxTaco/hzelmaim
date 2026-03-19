@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
-    auth::context::{AuthenticatedUser, validate_jwt_token},
+    auth::context::{validate_jwt_token, AuthenticatedUser},
     jobs::terminal::{TerminalClientMsg, TerminalStreamEvent},
     utils::error::ApiError,
 };

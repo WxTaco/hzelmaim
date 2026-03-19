@@ -4,11 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::{
-    db::Pool,
-    models::audit::AuditLogRecord,
-    utils::error::ApiError,
-};
+use crate::{db::Pool, models::audit::AuditLogRecord, utils::error::ApiError};
 
 /// Persistence boundary for audit log operations.
 #[async_trait]
@@ -17,7 +13,12 @@ pub trait AuditRepo: Send + Sync {
     async fn insert(&self, record: &AuditLogRecord) -> Result<(), ApiError>;
 
     /// Lists recent audit entries with optional user filter. Paginated by limit/offset.
-    async fn list(&self, user_id: Option<Uuid>, limit: i64, offset: i64) -> Result<Vec<AuditLogRecord>, ApiError>;
+    async fn list(
+        &self,
+        user_id: Option<Uuid>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<AuditLogRecord>, ApiError>;
 }
 
 /// PostgreSQL implementation of the audit repository.
@@ -76,7 +77,12 @@ impl AuditRepo for PgAuditRepo {
         Ok(())
     }
 
-    async fn list(&self, user_id: Option<Uuid>, limit: i64, offset: i64) -> Result<Vec<AuditLogRecord>, ApiError> {
+    async fn list(
+        &self,
+        user_id: Option<Uuid>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<AuditLogRecord>, ApiError> {
         let rows = sqlx::query_as::<_, AuditRow>(
             r#"SELECT id, user_id, container_id, action, outcome, metadata, created_at
                FROM audit_logs
@@ -93,4 +99,3 @@ impl AuditRepo for PgAuditRepo {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 }
-

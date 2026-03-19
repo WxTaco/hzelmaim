@@ -12,11 +12,11 @@ use crate::utils::error::ApiError;
  */
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
-    pub sub: String,           // user_id
+    pub sub: String, // user_id
     pub email: String,
     pub session_id: String,
-    pub iat: i64,              // issued at
-    pub exp: i64,              // expiration
+    pub iat: i64, // issued at
+    pub exp: i64, // expiration
 }
 
 /**
@@ -24,7 +24,7 @@ pub struct AccessTokenClaims {
  */
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefreshTokenClaims {
-    pub sub: String,           // user_id
+    pub sub: String, // user_id
     pub session_id: String,
     pub iat: i64,
     pub exp: i64,
@@ -127,4 +127,3 @@ impl JwtService {
         .map_err(|_| ApiError::unauthorized())
     }
 }
-

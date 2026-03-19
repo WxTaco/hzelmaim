@@ -26,10 +26,16 @@ pub trait ContainerRepo: Send + Sync {
     async fn create(&self, record: &ContainerRecord, owner_user_id: Uuid) -> Result<(), ApiError>;
 
     /// Updates the lifecycle state of a container.
-    async fn update_state(&self, container_id: Uuid, state: ContainerState) -> Result<(), ApiError>;
+    async fn update_state(&self, container_id: Uuid, state: ContainerState)
+        -> Result<(), ApiError>;
 
     /// Checks whether a user has at least the given access level to a container.
-    async fn check_access(&self, container_id: Uuid, user_id: Uuid, minimum: AccessLevel) -> Result<bool, ApiError>;
+    async fn check_access(
+        &self,
+        container_id: Uuid,
+        user_id: Uuid,
+        minimum: AccessLevel,
+    ) -> Result<bool, ApiError>;
 }
 
 /// PostgreSQL implementation of the container repository.
@@ -127,7 +133,11 @@ impl ContainerRepo for PgContainerRepo {
     }
 
     async fn create(&self, record: &ContainerRecord, owner_user_id: Uuid) -> Result<(), ApiError> {
-        let mut tx = self.pool.begin().await.map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
 
         sqlx::query(
             "INSERT INTO containers (id, proxmox_ctid, node_name, name, state, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -151,11 +161,17 @@ impl ContainerRepo for PgContainerRepo {
         .await
         .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
 
-        tx.commit().await.map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
+        tx.commit()
+            .await
+            .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
         Ok(())
     }
 
-    async fn update_state(&self, container_id: Uuid, state: ContainerState) -> Result<(), ApiError> {
+    async fn update_state(
+        &self,
+        container_id: Uuid,
+        state: ContainerState,
+    ) -> Result<(), ApiError> {
         sqlx::query("UPDATE containers SET state = $1 WHERE id = $2")
             .bind(state_str(&state))
             .bind(container_id)
@@ -165,7 +181,12 @@ impl ContainerRepo for PgContainerRepo {
         Ok(())
     }
 
-    async fn check_access(&self, container_id: Uuid, user_id: Uuid, minimum: AccessLevel) -> Result<bool, ApiError> {
+    async fn check_access(
+        &self,
+        container_id: Uuid,
+        user_id: Uuid,
+        minimum: AccessLevel,
+    ) -> Result<bool, ApiError> {
         let levels: Vec<&str> = match minimum {
             AccessLevel::Viewer => vec!["owner", "operator", "viewer"],
             AccessLevel::Operator => vec!["owner", "operator"],
@@ -183,4 +204,3 @@ impl ContainerRepo for PgContainerRepo {
         Ok(count.0 > 0)
     }
 }
-

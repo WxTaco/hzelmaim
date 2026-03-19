@@ -6,7 +6,10 @@ use crate::{
     auth::{jwt::JwtService, oidc::OidcService, session::SessionService},
     config::AppConfig,
     db::user_repo::UserRepo,
-    services::{command_service::CommandService, container_service::ContainerService, terminal_service::TerminalService},
+    services::{
+        command_service::CommandService, container_service::ContainerService,
+        terminal_service::TerminalService,
+    },
 };
 
 /// Runtime state shared by API routes.
@@ -34,6 +37,15 @@ impl AppState {
         user_repo: Arc<dyn UserRepo>,
         oidc_service: Option<Arc<OidcService>>,
     ) -> Self {
-        Self { config, session_service, jwt_service, container_service, command_service, terminal_service, user_repo, oidc_service }
+        Self {
+            config,
+            session_service,
+            jwt_service,
+            container_service,
+            command_service,
+            terminal_service,
+            user_repo,
+            oidc_service,
+        }
     }
 }

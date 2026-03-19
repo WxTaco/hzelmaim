@@ -12,9 +12,18 @@ use crate::models::command::{CommandExecutionRecord, CommandExecutionStatus};
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum JobEvent {
-    Queued { job_id: Uuid },
-    Output { job_id: Uuid, stream: String, chunk: String },
-    Finished { job_id: Uuid, success: bool },
+    Queued {
+        job_id: Uuid,
+    },
+    Output {
+        job_id: Uuid,
+        stream: String,
+        chunk: String,
+    },
+    Finished {
+        job_id: Uuid,
+        success: bool,
+    },
 }
 
 /// Lightweight in-memory queue suitable for initial scaffolding.
@@ -25,7 +34,9 @@ pub struct InMemoryCommandQueue {
 
 impl InMemoryCommandQueue {
     /// Creates a new in-memory command queue.
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Stores a queued job and returns the resulting record.
     pub async fn enqueue(&self, mut record: CommandExecutionRecord) -> CommandExecutionRecord {

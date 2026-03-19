@@ -1,7 +1,7 @@
 //! Real Proxmox VE client backed by the REST API over HTTPS.
 
 use async_trait::async_trait;
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::Deserialize;
 use tokio::time::Duration;
 use tracing::info;
@@ -11,7 +11,9 @@ use crate::{
     models::command::CommandExecutionRecord,
     proxmox::{
         client::ProxmoxClient,
-        types::{ContainerInterface, ContainerMetrics, ContainerRuntimeStatus, CreateContainerRequest},
+        types::{
+            ContainerInterface, ContainerMetrics, ContainerRuntimeStatus, CreateContainerRequest,
+        },
     },
     utils::error::ApiError,
 };
@@ -81,8 +83,9 @@ impl HttpProxmoxClient {
             );
             default_headers.insert(
                 header::HeaderName::from_static("cf-access-client-secret"),
-                header::HeaderValue::from_str(&config.cf_access_client_secret)
-                    .map_err(|e| ApiError::internal(format!("Invalid CF_ACCESS_CLIENT_SECRET: {e}")))?,
+                header::HeaderValue::from_str(&config.cf_access_client_secret).map_err(|e| {
+                    ApiError::internal(format!("Invalid CF_ACCESS_CLIENT_SECRET: {e}"))
+                })?,
             );
         }
 
@@ -121,7 +124,9 @@ impl HttpProxmoxClient {
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox {action} error: {body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox {action} error: {body}"
+            )));
         }
         Ok(())
     }
@@ -149,9 +154,15 @@ impl ProxmoxClient for HttpProxmoxClient {
 
         // Wait for the template CT to be free before cloning — Proxmox locks it
         // for the duration of any full clone task spawned from it.
-        info!(template_ctid = request.template_ctid, "waiting for template CT to be unlocked before clone");
+        info!(
+            template_ctid = request.template_ctid,
+            "waiting for template CT to be unlocked before clone"
+        );
         self.wait_for_unlock(request.template_ctid, 120).await?;
-        info!(template_ctid = request.template_ctid, "template CT is unlocked, proceeding with clone");
+        info!(
+            template_ctid = request.template_ctid,
+            "template CT is unlocked, proceeding with clone"
+        );
 
         // Clone from the template container.
         let params = vec![
@@ -175,7 +186,9 @@ impl ProxmoxClient for HttpProxmoxClient {
         let clone_body = resp.text().await.unwrap_or_default();
         info!(vmid, status = clone_status.as_u16(), body = %clone_body, "clone response received");
         if !clone_status.is_success() {
-            return Err(ApiError::internal(format!("Proxmox clone error: {clone_body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox clone error: {clone_body}"
+            )));
         }
 
         // Parse the UPID from the clone response and wait for the task to finish.
@@ -191,9 +204,18 @@ impl ProxmoxClient for HttpProxmoxClient {
 
         // Apply CPU, memory, and network config to the cloned container.
         let config_params = vec![
-            ("cores".to_string(), request.resource_limits.cpu_cores.to_string()),
-            ("memory".to_string(), request.resource_limits.memory_mb.to_string()),
-            ("net0".to_string(), "name=eth0,bridge=vmbr0,ip=dhcp".to_string()),
+            (
+                "cores".to_string(),
+                request.resource_limits.cpu_cores.to_string(),
+            ),
+            (
+                "memory".to_string(),
+                request.resource_limits.memory_mb.to_string(),
+            ),
+            (
+                "net0".to_string(),
+                "name=eth0,bridge=vmbr0,ip=dhcp".to_string(),
+            ),
         ];
 
         let config_url = self.node_url(&format!("/lxc/{vmid}/config"));
@@ -211,11 +233,16 @@ impl ProxmoxClient for HttpProxmoxClient {
         let config_body = config_resp.text().await.unwrap_or_default();
         info!(vmid, status = config_status.as_u16(), body = %config_body, "config update response received");
         if !config_status.is_success() {
-            return Err(ApiError::internal(format!("Proxmox config update error: {config_body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox config update error: {config_body}"
+            )));
         }
 
         // Wait for Proxmox to release the disk lock set during the clone task.
-        info!(vmid, "waiting for new container disk lock to clear before resize");
+        info!(
+            vmid,
+            "waiting for new container disk lock to clear before resize"
+        );
         self.wait_for_unlock(vmid, 120).await?;
         info!(vmid, "disk lock cleared, sending resize request");
 
@@ -223,7 +250,10 @@ impl ProxmoxClient for HttpProxmoxClient {
         // Setting rootfs via PUT /config on an already-cloned disk is not supported by Proxmox.
         let resize_params = vec![
             ("disk".to_string(), "rootfs".to_string()),
-            ("size".to_string(), format!("{}G", request.resource_limits.disk_gb)),
+            (
+                "size".to_string(),
+                format!("{}G", request.resource_limits.disk_gb),
+            ),
         ];
 
         let resize_url = self.node_url(&format!("/lxc/{vmid}/resize"));
@@ -241,7 +271,9 @@ impl ProxmoxClient for HttpProxmoxClient {
         let resize_body = resize_resp.text().await.unwrap_or_default();
         info!(vmid, status = resize_status.as_u16(), body = %resize_body, "resize response received");
         if !resize_status.is_success() {
-            return Err(ApiError::internal(format!("Proxmox disk resize error: {resize_body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox disk resize error: {resize_body}"
+            )));
         }
 
         info!(vmid, "proxmox container cloned and configured");
@@ -260,9 +292,15 @@ impl ProxmoxClient for HttpProxmoxClient {
         self.post_action(ctid, "reboot").await
     }
 
-    async fn exec_command(&self, _ctid: i32, _command: &CommandExecutionRecord) -> Result<(), ApiError> {
+    async fn exec_command(
+        &self,
+        _ctid: i32,
+        _command: &CommandExecutionRecord,
+    ) -> Result<(), ApiError> {
         // pct exec is not exposed via REST API — will use SSH instead.
-        Err(ApiError::not_implemented("exec via Proxmox API is not supported; use SSH"))
+        Err(ApiError::not_implemented(
+            "exec via Proxmox API is not supported; use SSH",
+        ))
     }
 
     async fn container_status(&self, ctid: i32) -> Result<ContainerRuntimeStatus, ApiError> {
@@ -321,7 +359,9 @@ impl ProxmoxClient for HttpProxmoxClient {
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox snapshot error: {body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox snapshot error: {body}"
+            )));
         }
         Ok(())
     }
@@ -351,7 +391,9 @@ impl ProxmoxClient for HttpProxmoxClient {
             }
         }
 
-        Err(ApiError::internal(format!("No IPv4 address found for container {ctid}")))
+        Err(ApiError::internal(format!(
+            "No IPv4 address found for container {ctid}"
+        )))
     }
 
     async fn set_container_password(&self, ctid: i32, password: &str) -> Result<(), ApiError> {
@@ -367,14 +409,15 @@ impl ProxmoxClient for HttpProxmoxClient {
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox set password error: {body}")));
+            return Err(ApiError::internal(format!(
+                "Proxmox set password error: {body}"
+            )));
         }
 
         info!(ctid, "container root password set");
         Ok(())
     }
 }
-
 
 impl HttpProxmoxClient {
     /// Polls the CT status until the Proxmox `lock` field is absent (i.e. the

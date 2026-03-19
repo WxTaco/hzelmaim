@@ -41,9 +41,8 @@ impl SshCa {
                 path.as_ref().display()
             ))
         })?;
-        let ca_key = PrivateKey::from_openssh(&key_data).map_err(|e| {
-            ApiError::internal(format!("Failed to parse SSH CA key: {e}"))
-        })?;
+        let ca_key = PrivateKey::from_openssh(&key_data)
+            .map_err(|e| ApiError::internal(format!("Failed to parse SSH CA key: {e}")))?;
         Ok(Self { ca_key })
     }
 
@@ -128,10 +127,12 @@ mod tests {
 
         // The certificate should be valid for the "root" principal.
         assert_eq!(cert.certificate.cert_type(), CertType::User);
-        assert!(cert.certificate.valid_principals().contains(&"root".to_string()));
+        assert!(cert
+            .certificate
+            .valid_principals()
+            .contains(&"root".to_string()));
 
         // The ephemeral private key should be ed25519.
         assert_eq!(cert.private_key.algorithm(), Algorithm::Ed25519);
     }
 }
-

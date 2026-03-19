@@ -10,5 +10,7 @@ pub struct ApiResponse<T> {
 
 impl<T> ApiResponse<T> {
     /// Wraps a payload in the standard success response shape.
-    pub fn new(data: T) -> Self { Self { data } }
+    pub fn new(data: T) -> Self {
+        Self { data }
+    }
 }

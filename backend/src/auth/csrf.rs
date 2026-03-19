@@ -1,6 +1,9 @@
 //! CSRF validation extractor for cookie-authenticated mutating routes.
 
-use axum::{extract::FromRequestParts, http::{request::Parts, HeaderMap}};
+use axum::{
+    extract::FromRequestParts,
+    http::{request::Parts, HeaderMap},
+};
 
 use crate::{app_state::AppState, auth::context::AuthenticatedSession, utils::error::ApiError};
 

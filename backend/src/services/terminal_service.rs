@@ -46,7 +46,11 @@ impl TerminalService {
         ssh_ca: Option<Arc<SshCa>>,
         config: Arc<AppConfig>,
     ) -> Self {
-        Self { proxmox, ssh_ca, config }
+        Self {
+            proxmox,
+            ssh_ca,
+            config,
+        }
     }
 
     /// Opens an interactive SSH session to the given container and bridges it
@@ -91,28 +95,30 @@ impl TerminalService {
         //    The SshCa uses the `ssh_key` crate while russh uses its own forked
         //    `internal-russh-forked-ssh-key`. We bridge the two by serialising
         //    to OpenSSH format and re-parsing through russh's types.
-        let cert_openssh = ephemeral.certificate.to_openssh().map_err(|e| {
-            ApiError::internal(format!("Failed to serialise certificate: {e}"))
-        })?;
+        let cert_openssh = ephemeral
+            .certificate
+            .to_openssh()
+            .map_err(|e| ApiError::internal(format!("Failed to serialise certificate: {e}")))?;
         let cert = Certificate::from_openssh(&cert_openssh)
             .map_err(|e| ApiError::internal(format!("Failed to parse certificate: {e}")))?;
 
-        let privkey_openssh = ephemeral.private_key.to_openssh(ssh_key::LineEnding::LF)
+        let privkey_openssh = ephemeral
+            .private_key
+            .to_openssh(ssh_key::LineEnding::LF)
             .map_err(|e| ApiError::internal(format!("Failed to serialise private key: {e}")))?;
-        let russh_privkey = decode_secret_key(privkey_openssh.as_ref(), None)
-            .map_err(|e| ApiError::internal(format!("Failed to parse private key for russh: {e}")))?;
+        let russh_privkey = decode_secret_key(privkey_openssh.as_ref(), None).map_err(|e| {
+            ApiError::internal(format!("Failed to parse private key for russh: {e}"))
+        })?;
 
         let auth = session
-            .authenticate_openssh_cert(
-                &*self.config.ssh_user,
-                Arc::new(russh_privkey),
-                cert,
-            )
+            .authenticate_openssh_cert(&*self.config.ssh_user, Arc::new(russh_privkey), cert)
             .await
             .map_err(|e| ApiError::internal(format!("SSH auth failed: {e}")))?;
 
         if !auth.success() {
-            return Err(ApiError::internal("SSH certificate authentication rejected"));
+            return Err(ApiError::internal(
+                "SSH certificate authentication rejected",
+            ));
         }
 
         // 5. Open a session channel and request a PTY + shell.
@@ -136,9 +142,7 @@ impl TerminalService {
         // 6. Bridge loop — shuttle data between WS and SSH.
         Self::bridge(channel, client_rx, server_tx).await;
 
-        let _ = session
-            .disconnect(Disconnect::ByApplication, "", "")
-            .await;
+        let _ = session.disconnect(Disconnect::ByApplication, "", "").await;
 
         Ok(())
     }

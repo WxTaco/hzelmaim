@@ -1,11 +1,15 @@
 //! Request-scoped authentication context and authorization helpers.
 
-use chrono::{DateTime, Utc};
 use axum::{extract::FromRequestParts, http::request::Parts};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{app_state::AppState, models::{session::AuthMethod, user::UserRole}, utils::error::ApiError};
+use crate::{
+    app_state::AppState,
+    models::{session::AuthMethod, user::UserRole},
+    utils::error::ApiError,
+};
 
 /// Authenticated actor attached to requests by the session layer.
 #[derive(Debug, Clone, Serialize)]
@@ -32,7 +36,9 @@ impl AuthenticatedUser {
         if self.role == UserRole::Admin || self.user_id == owner_user_id {
             Ok(())
         } else {
-            Err(ApiError::forbidden("You do not have access to this container"))
+            Err(ApiError::forbidden(
+                "You do not have access to this container",
+            ))
         }
     }
 }
@@ -41,7 +47,10 @@ impl FromRequestParts<AppState> for AuthenticatedSession {
     type Rejection = ApiError;
 
     /// Resolves session context from the configured session cookie.
-    fn from_request_parts(parts: &mut Parts, state: &AppState) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
+    fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
         let session_from_extensions = parts.extensions.get::<AuthenticatedSession>().cloned();
         let session_service = state.session_service.clone();
         let headers = parts.headers.clone();
@@ -62,7 +71,10 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
     /// 1. Request extensions (from middleware)
     /// 2. Session cookie (legacy)
     /// 3. JWT token in Authorization header (cross-domain)
-    fn from_request_parts(parts: &mut Parts, state: &AppState) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
+    fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
         let session_from_extensions = parts.extensions.get::<AuthenticatedSession>().cloned();
         let session_service = state.session_service.clone();
         let jwt_service = state.jwt_service.clone();
@@ -120,8 +132,7 @@ pub async fn validate_jwt_token(
     let claims = jwt_service.validate_access_token(token)?;
 
     // Parse user_id from claims
-    let user_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| ApiError::unauthorized())?;
+    let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| ApiError::unauthorized())?;
 
     // Fetch user from database
     let user = user_repo
