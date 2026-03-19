@@ -3,7 +3,7 @@
  * Collects hostname, CPU cores, memory, and disk size inputs.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { post } from '../../api/client';
 import type { CreateContainerResult } from '../../types/api';
 
@@ -28,30 +28,9 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
   const [memoryMb, setMemoryMb] = useState('512');
   const [diskGb, setDiskGb] = useState('8');
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
+  const [phase, setPhase] = useState<'cloning' | 'configuring' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateContainerResult | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, []);
-
-  const startCountdown = (seconds: number) => {
-    setCountdown(seconds);
-    countdownRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev === null || prev <= 1) {
-          clearInterval(countdownRef.current!);
-          countdownRef.current = null;
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,24 +42,22 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
     try {
       setLoading(true);
       setError(null);
-      // Countdown mirrors the 30s disk-lock wait on the backend before resize.
-      startCountdown(30);
+      setPhase('cloning');
+      // After a short delay switch label to reflect disk-lock wait phase.
+      const phaseTimer = setTimeout(() => setPhase('configuring'), 8000);
       const data = await post<CreateContainerResult>('/api/v1/containers', {
         hostname: hostname.trim(),
         cpu_cores: parseInt(cpuCores) || 1,
         memory_mb: parseInt(memoryMb) || 512,
         disk_gb: parseInt(diskGb) || 8,
       });
+      clearTimeout(phaseTimer);
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create container');
     } finally {
       setLoading(false);
-      setCountdown(null);
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
+      setPhase(null);
     }
   };
 
@@ -192,9 +169,9 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
               className="flex-1 rounded-lg bg-vercel-accent px-4 py-2.5 text-sm font-semibold text-vercel-bg transition-all duration-200 disabled:opacity-50 hover:bg-emerald-600 hover:shadow-vercel-md"
             >
               {loading
-                ? countdown !== null
-                  ? `Configuring disk… ${countdown}s`
-                  : 'Creating…'
+                ? phase === 'configuring'
+                  ? 'Waiting for disk unlock…'
+                  : 'Cloning template…'
                 : 'Create'}
             </button>
           </div>

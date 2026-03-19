@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use reqwest::{Client, header};
 use serde::Deserialize;
-use tokio::time::{Duration, sleep};
+use tokio::time::Duration;
 use tracing::info;
 
 use crate::{
@@ -34,6 +34,9 @@ struct PveResponse<T> {
 #[derive(Deserialize)]
 struct StatusData {
     status: String,
+    /// Present when Proxmox has placed a lock on the CT (e.g. "disk" during clone).
+    #[serde(default)]
+    lock: Option<String>,
     #[serde(default)]
     cpu: f64,
     #[serde(default)]
@@ -184,8 +187,8 @@ impl ProxmoxClient for HttpProxmoxClient {
             return Err(ApiError::internal(format!("Proxmox config update error: {body}")));
         }
 
-        // Proxmox locks the CT disk briefly after cloning — wait for the lock to clear.
-        sleep(Duration::from_secs(30)).await;
+        // Wait for Proxmox to release the disk lock set during the clone task.
+        self.wait_for_unlock(vmid, 120).await?;
 
         // Resize the rootfs disk to the requested size via the dedicated resize API.
         // Setting rootfs via PUT /config on an already-cloned disk is not supported by Proxmox.
@@ -342,6 +345,42 @@ impl ProxmoxClient for HttpProxmoxClient {
 
 
 impl HttpProxmoxClient {
+    /// Polls the CT status until the Proxmox `lock` field is absent (i.e. the
+    /// disk lock set during a full clone has been released) or `timeout_secs` elapses.
+    async fn wait_for_unlock(&self, ctid: i32, timeout_secs: u64) -> Result<(), ApiError> {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(timeout_secs);
+
+        loop {
+            let url = self.node_url(&format!("/lxc/{ctid}/status/current"));
+            let resp = self
+                .client
+                .get(&url)
+                .header(header::AUTHORIZATION, &self.auth_header)
+                .send()
+                .await;
+
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    if let Ok(parsed) = r.json::<PveResponse<StatusData>>().await {
+                        let locked = parsed.data.lock.as_deref().unwrap_or("").is_empty();
+                        if locked {
+                            return Ok(());
+                        }
+                        info!(ctid, lock = ?parsed.data.lock, "CT disk still locked, waiting");
+                    }
+                }
+                _ => {}
+            }
+
+            if tokio::time::Instant::now() >= deadline {
+                return Err(ApiError::internal(format!(
+                    "CT {ctid} disk lock did not clear within {timeout_secs}s"
+                )));
+            }
+            tokio::time::sleep(Duration::from_secs(3)).await;
+        }
+    }
+
     /// Polls until the container config is available (i.e. the clone task has
     /// finished) or `timeout_secs` elapses.
     async fn wait_for_container(&self, ctid: i32, timeout_secs: u64) -> Result<(), ApiError> {
