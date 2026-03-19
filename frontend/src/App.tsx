@@ -22,6 +22,7 @@
 import { ReactElement } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
+import { RequireAuth } from './auth/RequireAuth';
 import { ContainerDetailPage } from './pages/ContainerDetailPage';
 import { ContainersPage } from './pages/ContainersPage';
 import { CommandsPage } from './pages/CommandsPage';
@@ -52,12 +53,12 @@ export default function App() {
       {/* ── Auth route ──────────────────────────────────────────────── */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* ── Authenticated app routes (AppShell) ─────────────────────── */}
-      <Route path="/dashboard"  element={<ShellPage title="Dashboard"><DashboardPage /></ShellPage>} />
-      <Route path="/containers" element={<ShellPage title="Containers"><ContainersPage /></ShellPage>} />
-      <Route path="/containers/:containerId" element={<ShellPage title="Container Detail"><ContainerDetailPage /></ShellPage>} />
-      <Route path="/commands"  element={<ShellPage title="Commands"><CommandsPage /></ShellPage>} />
-      <Route path="/terminal"  element={<ShellPage title="Terminal"><TerminalPage /></ShellPage>} />
+      {/* ── Authenticated app routes (AppShell + RequireAuth) ────────── */}
+      <Route path="/dashboard"  element={<RequireAuth><ShellPage title="Dashboard"><DashboardPage /></ShellPage></RequireAuth>} />
+      <Route path="/containers" element={<RequireAuth><ShellPage title="Containers"><ContainersPage /></ShellPage></RequireAuth>} />
+      <Route path="/containers/:containerId" element={<RequireAuth><ShellPage title="Container Detail"><ContainerDetailPage /></ShellPage></RequireAuth>} />
+      <Route path="/commands"  element={<RequireAuth><ShellPage title="Commands"><CommandsPage /></ShellPage></RequireAuth>} />
+      <Route path="/terminal"  element={<RequireAuth><ShellPage title="Terminal"><TerminalPage /></ShellPage></RequireAuth>} />
     </Routes>
   );
 }

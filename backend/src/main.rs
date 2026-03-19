@@ -7,9 +7,9 @@ use std::time::Duration;
 use hzel_backend::{
     api,
     app_state::AppState,
-    auth::{session::{SessionConfig, SessionService}, store::InMemoryAuthStore},
+    auth::{oidc::OidcService, session::{SessionConfig, SessionService}, store::InMemoryAuthStore},
     config::AppConfig,
-    db::{self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo, container_repo::PgContainerRepo, pg_auth_store::PgAuthStore},
+    db::{self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo, container_repo::PgContainerRepo, pg_auth_store::PgAuthStore, user_repo::PgUserRepo},
     jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
     services::{audit_service::AuditService, command_service::CommandService, container_service::ContainerService, terminal_service::TerminalService},
@@ -119,7 +119,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Terminal service — requires SSH CA; if unavailable, sessions will error at runtime.
     let terminal_service = Arc::new(TerminalService::new(proxmox.clone(), ssh_ca, config.clone()));
 
-    let state = AppState::new(config.clone(), session_service, container_service, command_service, terminal_service);
+    // OIDC service — initialise if enabled.
+    let oidc_service = if config.oidc_enabled {
+        let user_repo: Arc<dyn hzel_backend::db::user_repo::UserRepo> = Arc::new(PgUserRepo::new(pool.clone()));
+        let oidc = OidcService::discover(&config, user_repo, pg_auth_store.clone())
+            .await
+            .map_err(|e| format!("OIDC init failed: {}", e.message))?;
+        info!("OIDC authentication enabled");
+        Some(Arc::new(oidc))
+    } else {
+        info!("OIDC authentication disabled");
+        None
+    };
+
+    let state = AppState::new(config.clone(), session_service, container_service, command_service, terminal_service, oidc_service);
 
     // Background state sync — reconcile DB with Proxmox every 30 seconds.
     let _sync_handle = state_sync::spawn_state_sync(

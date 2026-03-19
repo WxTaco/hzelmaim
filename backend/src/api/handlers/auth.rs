@@ -1,10 +1,25 @@
 //! Authentication-related HTTP handlers.
 
-use axum::{extract::State, Json};
+use axum::{
+    extract::{Query, State},
+    http::{header, StatusCode},
+    response::{IntoResponse, Redirect, Response},
+    Json,
+};
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::{api::response::ApiResponse, app_state::AppState, auth::{context::{AuthenticatedSession, AuthenticatedUser}, csrf::CsrfProtected, session::SessionConfig}, models::session::AuthMethod, utils::error::ApiError};
+use crate::{
+    api::response::ApiResponse,
+    app_state::AppState,
+    auth::{
+        context::{AuthenticatedSession, AuthenticatedUser},
+        csrf::CsrfProtected,
+        session::SessionConfig,
+    },
+    models::session::AuthMethod,
+    utils::error::ApiError,
+};
 
 /// Lightweight health endpoint for orchestration systems.
 pub async fn health() -> Json<ApiResponse<&'static str>> {
@@ -13,7 +28,54 @@ pub async fn health() -> Json<ApiResponse<&'static str>> {
 
 /// Placeholder login endpoint reserved for future OIDC and session bootstrap.
 pub async fn login() -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    Err(ApiError::not_implemented("OIDC login flow is not implemented in the initial scaffold"))
+    Err(ApiError::not_implemented("Use /api/v1/auth/oidc/authorize for login"))
+}
+
+/// Redirects the user agent to the OIDC provider's authorization endpoint.
+pub async fn oidc_authorize(State(state): State<AppState>) -> Result<Redirect, ApiError> {
+    let oidc = state
+        .oidc_service
+        .as_ref()
+        .ok_or_else(|| ApiError::not_implemented("OIDC is not enabled"))?;
+
+    let url = oidc.authorize_url().await;
+    Ok(Redirect::to(&url))
+}
+
+/// Query parameters returned by the OIDC provider on the callback redirect.
+#[derive(Debug, Deserialize)]
+pub struct OidcCallbackParams {
+    pub code: String,
+    pub state: String,
+}
+
+/// Handles the OIDC provider callback, exchanges the code, creates a session,
+/// and redirects to the frontend with a session cookie.
+pub async fn oidc_callback(
+    State(state): State<AppState>,
+    Query(params): Query<OidcCallbackParams>,
+) -> Result<Response, ApiError> {
+    let oidc = state
+        .oidc_service
+        .as_ref()
+        .ok_or_else(|| ApiError::not_implemented("OIDC is not enabled"))?;
+
+    let session = oidc.handle_callback(&params.code, &params.state).await?;
+
+    let cookie_name = &state.session_service.config().cookie_name;
+    let max_age = state.session_service.config().max_age_seconds;
+    let cookie = format!(
+        "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}",
+        cookie_name, session.id, max_age
+    );
+
+    Ok(Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(header::LOCATION, "/")
+        .header(header::SET_COOKIE, cookie)
+        .body(axum::body::Body::empty())
+        .unwrap()
+        .into_response())
 }
 
 /// Session logout endpoint.

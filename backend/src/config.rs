@@ -30,7 +30,13 @@ pub struct AppConfig {
     pub ssh_user: String,
     pub ssh_port: u16,
 
+    // OIDC
     pub oidc_enabled: bool,
+    pub oidc_issuer_url: String,
+    pub oidc_client_id: String,
+    pub oidc_client_secret: String,
+    pub oidc_redirect_uri: String,
+
     pub bootstrap_dev_session: bool,
 }
 
@@ -59,6 +65,13 @@ impl AppConfig {
             ssh_port: env::var("SSH_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(22),
 
             oidc_enabled: env::var("OIDC_ENABLED").map(|v| v == "true").unwrap_or(false),
+            oidc_issuer_url: env::var("OIDC_ISSUER_URL").unwrap_or_default(),
+            oidc_client_id: env::var("OIDC_CLIENT_ID").unwrap_or_default(),
+            oidc_client_secret: env::var("OIDC_CLIENT_SECRET").unwrap_or_default(),
+            oidc_redirect_uri: env::var("OIDC_REDIRECT_URI").unwrap_or_else(|_| {
+                let base = env::var("PUBLIC_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".into());
+                format!("{}/api/v1/auth/oidc/callback", base)
+            }),
             bootstrap_dev_session: env::var("BOOTSTRAP_DEV_SESSION").map(|v| v == "true").unwrap_or(false),
         }
     }

@@ -29,6 +29,9 @@ pub trait AuthStore: Send + Sync {
 
     /// Marks a session as revoked.
     async fn revoke_session(&self, session_id: Uuid) -> Result<(), ApiError>;
+
+    /// Creates a new session record.
+    async fn create_session(&self, session: &SessionRecord) -> Result<(), ApiError>;
 }
 
 /// Result of seeding a development user and session.
@@ -118,6 +121,11 @@ impl AuthStore for InMemoryAuthStore {
         if let Some(session) = self.sessions.write().await.get_mut(&session_id) {
             session.revoked_at = Some(Utc::now());
         }
+        Ok(())
+    }
+
+    async fn create_session(&self, session: &SessionRecord) -> Result<(), ApiError> {
+        self.sessions.write().await.insert(session.id, session.clone());
         Ok(())
     }
 }

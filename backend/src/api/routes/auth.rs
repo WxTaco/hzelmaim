@@ -16,6 +16,8 @@ pub fn router() -> Router<AppState> {
             Router::new()
                 .route("/login", post(auth::login))
                 .route("/logout", post(auth::logout))
-                .route("/session", get(auth::session)),
+                .route("/session", get(auth::session))
+                .route("/oidc/authorize", get(auth::oidc_authorize))
+                .route("/oidc/callback", get(auth::oidc_callback)),
         )
 }

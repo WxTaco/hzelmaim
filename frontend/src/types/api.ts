@@ -15,6 +15,9 @@ export interface ApiResponse<T> {
 
 export type ContainerState = 'provisioning' | 'running' | 'stopped' | 'failed';
 
+/**
+ * Container summary for list views.
+ */
 export interface ContainerSummary {
   id: string;
   proxmox_ctid: number;
@@ -22,6 +25,29 @@ export interface ContainerSummary {
   node_name: string;
   state: ContainerState;
   created_at: string;
+}
+
+/**
+ * Full container record with all details.
+ */
+export interface ContainerRecord extends ContainerSummary {}
+
+/**
+ * Result returned from container creation, includes initial password.
+ */
+export interface CreateContainerResult extends ContainerRecord {
+  initial_password?: string;
+}
+
+/**
+ * Container metrics (CPU, memory, network).
+ */
+export interface ContainerMetrics {
+  cpu_percent: number;
+  memory_used_mb: number;
+  memory_limit_mb: number;
+  network_rx_bytes: number;
+  network_tx_bytes: number;
 }
 
 export interface CommandJob {

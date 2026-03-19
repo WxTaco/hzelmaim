@@ -140,5 +140,26 @@ impl AuthStore for PgAuthStore {
             .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
         Ok(())
     }
+
+    async fn create_session(&self, session: &SessionRecord) -> Result<(), ApiError> {
+        let auth_method_str = match session.auth_method {
+            AuthMethod::Session => "session",
+            AuthMethod::Oidc => "oidc",
+        };
+        sqlx::query(
+            "INSERT INTO user_sessions (id, user_id, csrf_token, auth_method, expires_at, created_at, last_seen_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        )
+        .bind(session.id)
+        .bind(session.user_id)
+        .bind(&session.csrf_token)
+        .bind(auth_method_str)
+        .bind(session.expires_at)
+        .bind(session.created_at)
+        .bind(session.last_seen_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
+        Ok(())
+    }
 }
 
