@@ -22,7 +22,6 @@ const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/containers', label: 'Containers' },
   { to: '/commands', label: 'Commands' },
-  { to: '/terminal', label: 'Terminal' },
   { to: '/login', label: 'Auth' },
 ];
 

@@ -3,20 +3,28 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        Path, State, WebSocketUpgrade,
+        Path, Query, State, WebSocketUpgrade,
     },
     response::Response,
 };
 use futures::{SinkExt, StreamExt};
+use serde::Deserialize;
 use tokio::sync::mpsc;
 use tracing::{error, warn};
 use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
-    auth::context::AuthenticatedUser,
+    auth::context::{AuthenticatedUser, validate_jwt_token},
     jobs::terminal::{TerminalClientMsg, TerminalStreamEvent},
+    utils::error::ApiError,
 };
+
+/// Query parameters for WebSocket connections (JWT token).
+#[derive(Debug, Deserialize)]
+pub struct WsAuthQuery {
+    pub token: Option<String>,
+}
 
 /// Opens a command-output stream for a specific job (still a placeholder).
 pub async fn job_stream(Path(job_id): Path<Uuid>, ws: WebSocketUpgrade) -> Response {
@@ -28,6 +36,8 @@ async fn handle_idle_socket(_socket: WebSocket, _resource_id: Uuid) {
 }
 
 /// Opens an interactive terminal stream for a container.
+///
+/// Accepts JWT token via query parameter: `/ws/terminal/{container_id}?token=<jwt>`
 ///
 /// Protocol (JSON over WebSocket text frames):
 ///
@@ -49,15 +59,21 @@ async fn handle_idle_socket(_socket: WebSocket, _resource_id: Uuid) {
 /// dimensions. If omitted, defaults of 80×24 are used.
 pub async fn terminal_stream(
     Path(container_id): Path<Uuid>,
-    user: AuthenticatedUser,
+    Query(auth_query): Query<WsAuthQuery>,
     State(state): State<AppState>,
     ws: WebSocketUpgrade,
-) -> Response {
-    ws.on_upgrade(move |socket| async move {
+) -> Result<Response, ApiError> {
+    // Extract JWT token from query parameter
+    let token = auth_query.token.ok_or_else(ApiError::unauthorized)?;
+
+    // Validate JWT token and get authenticated user
+    let user = validate_jwt_token(&token, &state.jwt_service, &state.user_repo).await?;
+
+    Ok(ws.on_upgrade(move |socket| async move {
         if let Err(e) = handle_terminal(socket, container_id, user, state).await {
             warn!(error = %e, "terminal session ended with error");
         }
-    })
+    }))
 }
 
 async fn handle_terminal(

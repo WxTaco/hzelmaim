@@ -12,8 +12,8 @@
  *   /dashboard       → DashboardPage   (was `/`)
  *   /containers      → ContainersPage
  *   /containers/:id  → ContainerDetailPage
+ *   /containers/:id/terminal → TerminalPage
  *   /commands        → CommandsPage
- *   /terminal        → TerminalPage
  *
  * Auth route
  *   /login           → LoginPage
@@ -59,8 +59,8 @@ export default function App() {
       <Route path="/dashboard"  element={<RequireAuth><ShellPage title="Dashboard"><DashboardPage /></ShellPage></RequireAuth>} />
       <Route path="/containers" element={<RequireAuth><ShellPage title="Containers"><ContainersPage /></ShellPage></RequireAuth>} />
       <Route path="/containers/:containerId" element={<RequireAuth><ShellPage title="Container Detail"><ContainerDetailPage /></ShellPage></RequireAuth>} />
+      <Route path="/containers/:containerId/terminal" element={<RequireAuth><ShellPage title="Terminal"><TerminalPage /></ShellPage></RequireAuth>} />
       <Route path="/commands"  element={<RequireAuth><ShellPage title="Commands"><CommandsPage /></ShellPage></RequireAuth>} />
-      <Route path="/terminal"  element={<RequireAuth><ShellPage title="Terminal"><TerminalPage /></ShellPage></RequireAuth>} />
     </Routes>
   );
 }

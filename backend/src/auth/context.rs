@@ -86,22 +86,36 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
     }
 }
 
-/// Extracts and validates JWT token from Authorization header.
+/// Extracts and validates JWT token from Authorization header or query parameter.
 async fn authenticate_jwt(
     headers: &axum::http::HeaderMap,
     jwt_service: &crate::auth::jwt::JwtService,
     user_repo: &std::sync::Arc<dyn crate::db::user_repo::UserRepo>,
 ) -> Result<AuthenticatedUser, ApiError> {
-    // Extract token from Authorization header
-    let auth_header = headers
+    // Try to extract token from Authorization header first
+    let token = if let Some(auth_header) = headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|h| h.to_str().ok())
-        .ok_or_else(ApiError::unauthorized)?;
+    {
+        auth_header
+            .strip_prefix("Bearer ")
+            .ok_or_else(ApiError::unauthorized)?
+    } else {
+        // If no Authorization header, the token might be in query params
+        // (for WebSocket connections which can't use custom headers)
+        // This will be handled by the caller passing it via query string
+        return Err(ApiError::unauthorized());
+    };
 
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or_else(ApiError::unauthorized)?;
+    validate_jwt_token(token, jwt_service, user_repo).await
+}
 
+/// Validates a JWT token and returns an AuthenticatedUser.
+pub async fn validate_jwt_token(
+    token: &str,
+    jwt_service: &crate::auth::jwt::JwtService,
+    user_repo: &std::sync::Arc<dyn crate::db::user_repo::UserRepo>,
+) -> Result<AuthenticatedUser, ApiError> {
     // Validate JWT token
     let claims = jwt_service.validate_access_token(token)?;
 

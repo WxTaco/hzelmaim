@@ -14,7 +14,8 @@ pub struct CsrfProtected;
 impl FromRequestParts<AppState> for CsrfProtected {
     type Rejection = ApiError;
 
-    /// Validates the authenticated session and CSRF header, then stores the session for downstream extractors.
+    /// Validates CSRF for session-based auth, or skips validation for JWT tokens.
+    /// JWT tokens don't need CSRF protection since they're not sent via cookies.
     fn from_request_parts(
         parts: &mut Parts,
         state: &AppState,
@@ -24,6 +25,19 @@ impl FromRequestParts<AppState> for CsrfProtected {
         let headers = parts.headers.clone();
 
         async move {
+            // Check if this is a JWT token request (Authorization header present)
+            let is_jwt_auth = headers
+                .get(axum::http::header::AUTHORIZATION)
+                .and_then(|h| h.to_str().ok())
+                .map(|h| h.starts_with("Bearer "))
+                .unwrap_or(false);
+
+            // If using JWT tokens, skip CSRF validation (not needed for stateless tokens)
+            if is_jwt_auth {
+                return Ok(Self);
+            }
+
+            // For session-based auth, validate CSRF token
             let session = match session_from_extensions {
                 Some(session) => session,
                 None => session_service.authenticate_headers(&headers).await?,

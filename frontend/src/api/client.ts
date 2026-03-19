@@ -37,6 +37,11 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem('refresh_token');
 }
 
+/** Retrieve the access token from memory. */
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 /** Generic fetch wrapper that includes JWT access token in Authorization header. */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
