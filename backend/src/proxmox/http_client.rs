@@ -161,11 +161,10 @@ impl ProxmoxClient for HttpProxmoxClient {
         // Wait for the clone task to finish by polling the container config.
         self.wait_for_container(vmid, 60).await?;
 
-        // Apply resource limits and network config to the cloned container.
+        // Apply CPU, memory, and network config to the cloned container.
         let config_params = vec![
             ("cores".to_string(), request.resource_limits.cpu_cores.to_string()),
             ("memory".to_string(), request.resource_limits.memory_mb.to_string()),
-            ("rootfs".to_string(), format!("local-lvm:{}", request.resource_limits.disk_gb)),
             ("net0".to_string(), "name=eth0,bridge=vmbr0,ip=dhcp".to_string()),
         ];
 
@@ -182,6 +181,28 @@ impl ProxmoxClient for HttpProxmoxClient {
         if !config_resp.status().is_success() {
             let body = config_resp.text().await.unwrap_or_default();
             return Err(ApiError::internal(format!("Proxmox config update error: {body}")));
+        }
+
+        // Resize the rootfs disk to the requested size via the dedicated resize API.
+        // Setting rootfs via PUT /config on an already-cloned disk is not supported by Proxmox.
+        let resize_params = vec![
+            ("disk".to_string(), "rootfs".to_string()),
+            ("size".to_string(), format!("{}G", request.resource_limits.disk_gb)),
+        ];
+
+        let resize_url = self.node_url(&format!("/lxc/{vmid}/resize"));
+        let resize_resp = self
+            .client
+            .put(&resize_url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&resize_params)
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox disk resize failed: {e}")))?;
+
+        if !resize_resp.status().is_success() {
+            let body = resize_resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!("Proxmox disk resize error: {body}")));
         }
 
         info!(vmid, "proxmox container cloned and configured");
