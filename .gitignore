@@ -1,7 +1,9 @@
-frontend/node_modules/
+node_modules/
 frontend/dist/
 backend/target/
 .DS_Store
 .env
 .env.*
 keys/
+.turbo/
+.next/
