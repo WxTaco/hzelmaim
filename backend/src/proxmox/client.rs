@@ -25,9 +25,6 @@ pub trait ProxmoxClient: Send + Sync {
     async fn create_snapshot(&self, ctid: i32, name: &str) -> Result<(), ApiError>;
     /// Returns the first non-loopback IPv4 address for the container.
     async fn get_container_ip(&self, ctid: i32) -> Result<String, ApiError>;
-
-    /// Sets the root password inside a container via the Proxmox API.
-    async fn set_container_password(&self, ctid: i32, password: &str) -> Result<(), ApiError>;
 }
 
 /// Safe placeholder client that forces production integrations through this module.
@@ -80,10 +77,5 @@ impl ProxmoxClient for StubProxmoxClient {
     }
     async fn get_container_ip(&self, _ctid: i32) -> Result<String, ApiError> {
         Err(ApiError::not_implemented("IP lookup is not wired yet"))
-    }
-    async fn set_container_password(&self, _ctid: i32, _password: &str) -> Result<(), ApiError> {
-        Err(ApiError::not_implemented(
-            "Password setting is not wired yet",
-        ))
     }
 }

@@ -368,13 +368,25 @@ impl ProxmoxClient for HttpProxmoxClient {
 
     async fn get_container_ip(&self, ctid: i32) -> Result<String, ApiError> {
         let url = self.node_url(&format!("/lxc/{ctid}/interfaces"));
-        let resp: PveResponse<Vec<ContainerInterface>> = self
+        let http_resp = self
             .client
             .get(&url)
             .header(header::AUTHORIZATION, &self.auth_header)
             .send()
             .await
-            .map_err(|e| ApiError::internal(format!("Proxmox interfaces failed: {e}")))?
+            .map_err(|e| ApiError::internal(format!("Proxmox interfaces failed: {e}")))?;
+
+        if !http_resp.status().is_success() {
+            // Proxmox returns non-2xx (e.g. 500 "container not running") when
+            // the CT is stopped — the JSON body is undecodable as interface data.
+            let status = http_resp.status();
+            let body = http_resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Container {ctid} is not running or has no network (HTTP {status}): {body}"
+            )));
+        }
+
+        let resp: PveResponse<Vec<ContainerInterface>> = http_resp
             .json()
             .await
             .map_err(|e| ApiError::internal(format!("Failed to parse interfaces: {e}")))?;
@@ -396,27 +408,6 @@ impl ProxmoxClient for HttpProxmoxClient {
         )))
     }
 
-    async fn set_container_password(&self, ctid: i32, password: &str) -> Result<(), ApiError> {
-        let url = self.node_url(&format!("/lxc/{ctid}/config"));
-        let resp = self
-            .client
-            .put(&url)
-            .header(header::AUTHORIZATION, &self.auth_header)
-            .form(&[("password", password)])
-            .send()
-            .await
-            .map_err(|e| ApiError::internal(format!("Proxmox set password failed: {e}")))?;
-
-        if !resp.status().is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!(
-                "Proxmox set password error: {body}"
-            )));
-        }
-
-        info!(ctid, "container root password set");
-        Ok(())
-    }
 }
 
 impl HttpProxmoxClient {

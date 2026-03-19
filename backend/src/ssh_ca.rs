@@ -104,7 +104,7 @@ impl SshCa {
 
         let certificate = builder
             .sign(&self.ca_key)
-            .map_err(|e| ApiError::internal(format!("Failed to sign certificate: {e}")))?;
+            .map_err(|e| ApiError::internal(format!("Failed to sign certificate: {e:?}")))?;
 
         Ok(EphemeralCert {
             private_key: ephemeral_key,
