@@ -2,8 +2,7 @@
 
 use axum::{
     extract::{Query, State},
-    http::{header, StatusCode},
-    response::{IntoResponse, Redirect, Response},
+    response::Redirect,
     Json,
 };
 use chrono::{DateTime, Utc};
