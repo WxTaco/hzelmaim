@@ -26,7 +26,7 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
   const [hostname, setHostname] = useState('');
   const [cpuCores, setCpuCores] = useState('1');
   const [memoryMb, setMemoryMb] = useState('512');
-  const [diskGb, setDiskGb] = useState('8');
+  const [diskGb, setDiskGb] = useState('16');
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<'cloning' | 'configuring' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
         hostname: hostname.trim(),
         cpu_cores: parseInt(cpuCores) || 1,
         memory_mb: parseInt(memoryMb) || 512,
-        disk_gb: parseInt(diskGb) || 8,
+        disk_gb: parseInt(diskGb) || 16,
       });
       clearTimeout(phaseTimer);
       setResult(data);
@@ -146,8 +146,8 @@ export function CreateContainerModal({ onClose, onSuccess }: CreateContainerModa
               <label className="block text-sm font-semibold text-vercel-text">Disk (GB)</label>
               <input
                 type="number"
-                min="1"
-                max="1000"
+                min="16"
+                max="32"
                 value={diskGb}
                 onChange={(e) => setDiskGb(e.target.value)}
                 className="mt-2 w-full rounded-lg border border-vercel-border bg-vercel-surface px-3 py-2 text-sm text-vercel-text focus:border-vercel-accent focus:outline-none transition-colors"
