@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { get, post } from '../api/client';
 import { Card } from '../components/ui/Card';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -107,6 +107,14 @@ export function ContainerDetailPage(): React.ReactElement {
         {/* Lifecycle Actions */}
         <Card title="Lifecycle Actions" subtitle="Start, stop, and restart operations.">
           <div className="space-y-3">
+            <Link
+              to={`/containers/${containerId}/terminal`}
+              aria-disabled={container.state !== 'running'}
+              tabIndex={container.state !== 'running' ? -1 : undefined}
+              className={`block w-full rounded-lg border border-vercel-accent/40 px-4 py-2.5 text-center text-sm font-semibold text-vercel-accent transition-all duration-200 hover:border-vercel-accent hover:bg-vercel-accent/10 ${container.state !== 'running' ? 'pointer-events-none opacity-40' : ''}`}
+            >
+              Open Terminal
+            </Link>
             <button
               onClick={() => handleAction('start')}
               disabled={actionLoading || container.state === 'running'}
