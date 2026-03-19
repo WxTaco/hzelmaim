@@ -33,7 +33,9 @@ pub struct SshCa {
 impl SshCa {
     /// Loads the CA private key from the given path.
     ///
-    /// The file must be an unencrypted OpenSSH private key (ed25519 recommended).
+    /// The file must be an unencrypted OpenSSH ed25519 private key.
+    /// A signing smoke-test is performed at load time so startup fails fast
+    /// instead of failing silently during a live terminal session.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ApiError> {
         let key_data = std::fs::read_to_string(path.as_ref()).map_err(|e| {
             ApiError::internal(format!(
@@ -43,7 +45,27 @@ impl SshCa {
         })?;
         let ca_key = PrivateKey::from_openssh(&key_data)
             .map_err(|e| ApiError::internal(format!("Failed to parse SSH CA key: {e}")))?;
-        Ok(Self { ca_key })
+
+        if ca_key.algorithm() != Algorithm::Ed25519 {
+            return Err(ApiError::internal(format!(
+                "SSH CA key must be ed25519 (got {:?}). \
+                 Regenerate with: ssh-keygen -t ed25519 -f keys/ca -N \"\"",
+                ca_key.algorithm()
+            )));
+        }
+
+        let ca = Self { ca_key };
+
+        // Smoke-test: verify signing actually works before accepting the key.
+        ca.issue("smoke-test", "startup-check", 30).map_err(|e| {
+            ApiError::internal(format!(
+                "SSH CA key loaded but signing failed (key may be corrupt or \
+                 missing crypto feature): {}",
+                e.message
+            ))
+        })?;
+
+        Ok(ca)
     }
 
     /// Returns the CA public key in OpenSSH authorized_keys format.
