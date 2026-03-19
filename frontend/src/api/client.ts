@@ -5,6 +5,8 @@
 
 import type { ApiResponse, ApiErrorResponse } from '../types/api';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+
 class ApiError extends Error {
   constructor(public code: string, message: string, public status: number) {
     super(message);
@@ -52,7 +54,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(path, {
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  const res = await fetch(url, {
     ...options,
     headers,
   });

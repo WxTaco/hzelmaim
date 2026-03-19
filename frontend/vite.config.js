@@ -6,9 +6,9 @@ export default defineConfig({
         port: 5174,
         // Allow connections from your custom host
         host: true, // listens on all network interfaces
-        allowedHosts: ['crosswind.heliki.preview.hzel.org'],
+        allowedHosts: ['hzel.heliki.preview.hzel.org'],
         cors: {
-            origin: ['https://crosswind.heliki.preview.hzel.org'],
+            origin: ['https://hzel.heliki.preview.hzel.org'],
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             credentials: true,
         },
