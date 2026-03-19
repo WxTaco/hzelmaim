@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use reqwest::{Client, header};
 use serde::Deserialize;
+use tokio::time::{Duration, sleep};
 use tracing::info;
 
 use crate::{
@@ -182,6 +183,9 @@ impl ProxmoxClient for HttpProxmoxClient {
             let body = config_resp.text().await.unwrap_or_default();
             return Err(ApiError::internal(format!("Proxmox config update error: {body}")));
         }
+
+        // Proxmox locks the CT disk briefly after cloning — wait for the lock to clear.
+        sleep(Duration::from_secs(30)).await;
 
         // Resize the rootfs disk to the requested size via the dedicated resize API.
         // Setting rootfs via PUT /config on an already-cloned disk is not supported by Proxmox.
