@@ -141,7 +141,9 @@ impl ProxmoxClient for HttpProxmoxClient {
 
         // Wait for the template CT to be free before cloning — Proxmox locks it
         // for the duration of any full clone task spawned from it.
+        info!(template_ctid = request.template_ctid, "waiting for template CT to be unlocked before clone");
         self.wait_for_unlock(request.template_ctid, 120).await?;
+        info!(template_ctid = request.template_ctid, "template CT is unlocked, proceeding with clone");
 
         // Clone from the template container.
         let params = vec![
@@ -150,8 +152,8 @@ impl ProxmoxClient for HttpProxmoxClient {
             ("full".to_string(), "1".to_string()),
         ];
 
-        // Apply resource limits after clone via a config update.
         let clone_url = self.node_url(&format!("/lxc/{}/clone", request.template_ctid));
+        info!(vmid, template_ctid = request.template_ctid, %clone_url, "sending clone request to Proxmox");
         let resp = self
             .client
             .post(&clone_url)
@@ -161,13 +163,17 @@ impl ProxmoxClient for HttpProxmoxClient {
             .await
             .map_err(|e| ApiError::internal(format!("Proxmox clone failed: {e}")))?;
 
-        if !resp.status().is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox clone error: {body}")));
+        let clone_status = resp.status();
+        let clone_body = resp.text().await.unwrap_or_default();
+        info!(vmid, status = clone_status.as_u16(), body = %clone_body, "clone response received");
+        if !clone_status.is_success() {
+            return Err(ApiError::internal(format!("Proxmox clone error: {clone_body}")));
         }
 
         // Wait for the clone task to finish by polling the container config.
+        info!(vmid, "waiting for cloned container config to become available");
         self.wait_for_container(vmid, 60).await?;
+        info!(vmid, "container config is available, applying resource limits");
 
         // Apply CPU, memory, and network config to the cloned container.
         let config_params = vec![
@@ -177,6 +183,7 @@ impl ProxmoxClient for HttpProxmoxClient {
         ];
 
         let config_url = self.node_url(&format!("/lxc/{vmid}/config"));
+        info!(vmid, %config_url, "sending config update request");
         let config_resp = self
             .client
             .put(&config_url)
@@ -186,13 +193,17 @@ impl ProxmoxClient for HttpProxmoxClient {
             .await
             .map_err(|e| ApiError::internal(format!("Proxmox config update failed: {e}")))?;
 
-        if !config_resp.status().is_success() {
-            let body = config_resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox config update error: {body}")));
+        let config_status = config_resp.status();
+        let config_body = config_resp.text().await.unwrap_or_default();
+        info!(vmid, status = config_status.as_u16(), body = %config_body, "config update response received");
+        if !config_status.is_success() {
+            return Err(ApiError::internal(format!("Proxmox config update error: {config_body}")));
         }
 
         // Wait for Proxmox to release the disk lock set during the clone task.
+        info!(vmid, "waiting for new container disk lock to clear before resize");
         self.wait_for_unlock(vmid, 120).await?;
+        info!(vmid, "disk lock cleared, sending resize request");
 
         // Resize the rootfs disk to the requested size via the dedicated resize API.
         // Setting rootfs via PUT /config on an already-cloned disk is not supported by Proxmox.
@@ -202,6 +213,7 @@ impl ProxmoxClient for HttpProxmoxClient {
         ];
 
         let resize_url = self.node_url(&format!("/lxc/{vmid}/resize"));
+        info!(vmid, disk_gb = request.resource_limits.disk_gb, %resize_url, "sending disk resize request");
         let resize_resp = self
             .client
             .put(&resize_url)
@@ -211,9 +223,11 @@ impl ProxmoxClient for HttpProxmoxClient {
             .await
             .map_err(|e| ApiError::internal(format!("Proxmox disk resize failed: {e}")))?;
 
-        if !resize_resp.status().is_success() {
-            let body = resize_resp.text().await.unwrap_or_default();
-            return Err(ApiError::internal(format!("Proxmox disk resize error: {body}")));
+        let resize_status = resize_resp.status();
+        let resize_body = resize_resp.text().await.unwrap_or_default();
+        info!(vmid, status = resize_status.as_u16(), body = %resize_body, "resize response received");
+        if !resize_status.is_success() {
+            return Err(ApiError::internal(format!("Proxmox disk resize error: {resize_body}")));
         }
 
         info!(vmid, "proxmox container cloned and configured");
