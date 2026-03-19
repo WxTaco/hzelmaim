@@ -3,12 +3,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use chrono::{Duration, Utc};
+use openidconnect::reqwest;
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
-    AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    IssuerUrl, Nonce, RedirectUrl, Scope, TokenResponse,
+    AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce, RedirectUrl, Scope,
+    TokenResponse,
 };
-use openidconnect::reqwest;
 use tokio::sync::RwLock;
 use tracing::info;
 use uuid::Uuid;
@@ -159,7 +159,10 @@ impl OidcService {
         info!(sub = %subject, email = %email, "OIDC login");
 
         // Upsert user from OIDC identity (sub stored in oidc_identities.subject)
-        let user = self.user_repo.upsert_oidc_identity(&issuer, &subject, &email).await?;
+        let user = self
+            .user_repo
+            .upsert_oidc_identity(&issuer, &subject, &email)
+            .await?;
 
         let now = Utc::now();
         let session = SessionRecord {
@@ -178,4 +181,3 @@ impl OidcService {
         Ok(session)
     }
 }
-

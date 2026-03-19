@@ -162,4 +162,3 @@ impl AuthStore for PgAuthStore {
         Ok(())
     }
 }
-

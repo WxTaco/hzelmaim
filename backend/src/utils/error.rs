@@ -1,6 +1,10 @@
 //! Structured API error definitions used across the backend.
 
-use axum::{http::StatusCode, response::{IntoResponse, Response}, Json};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 use serde::Serialize;
 use serde_json::json;
 
@@ -29,7 +33,11 @@ pub struct ApiError {
 impl ApiError {
     /// Creates an unauthorized response.
     pub fn unauthorized() -> Self {
-        Self::new(StatusCode::UNAUTHORIZED, ApiErrorCode::Unauthorized, "Authentication required")
+        Self::new(
+            StatusCode::UNAUTHORIZED,
+            ApiErrorCode::Unauthorized,
+            "Authentication required",
+        )
     }
 
     /// Creates a forbidden response.
@@ -48,32 +56,56 @@ impl ApiError {
 
     /// Creates a validation error response.
     pub fn validation(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::BAD_REQUEST, ApiErrorCode::ValidationFailed, message)
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            ApiErrorCode::ValidationFailed,
+            message,
+        )
     }
 
     /// Creates a missing container response.
     pub fn container_not_found(container_id: impl Into<String>) -> Self {
-        Self::new(StatusCode::NOT_FOUND, ApiErrorCode::ContainerNotFound, format!("Container {} was not found", container_id.into()))
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::ContainerNotFound,
+            format!("Container {} was not found", container_id.into()),
+        )
     }
 
     /// Creates a missing command response.
     pub fn command_not_found(command_id: impl Into<String>) -> Self {
-        Self::new(StatusCode::NOT_FOUND, ApiErrorCode::CommandNotFound, format!("Command job {} was not found", command_id.into()))
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::CommandNotFound,
+            format!("Command job {} was not found", command_id.into()),
+        )
     }
 
     /// Creates an internal server error response.
     pub fn internal(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, ApiErrorCode::InternalError, message)
+        Self::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ApiErrorCode::InternalError,
+            message,
+        )
     }
 
     /// Creates a generic not implemented response.
     pub fn not_implemented(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::NOT_IMPLEMENTED, ApiErrorCode::NotImplemented, message)
+        Self::new(
+            StatusCode::NOT_IMPLEMENTED,
+            ApiErrorCode::NotImplemented,
+            message,
+        )
     }
 
     /// Creates a new error payload.
     pub fn new(status: StatusCode, code: ApiErrorCode, message: impl Into<String>) -> Self {
-        Self { status, code, message: message.into() }
+        Self {
+            status,
+            code,
+            message: message.into(),
+        }
     }
 }
 

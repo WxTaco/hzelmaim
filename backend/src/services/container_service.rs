@@ -11,7 +11,10 @@ use crate::{
     auth::context::AuthenticatedUser,
     db::container_repo::ContainerRepo,
     models::container::{AccessLevel, ContainerRecord, ContainerState, CreateContainerResult},
-    proxmox::{client::ProxmoxClient, types::{ContainerMetrics, CreateContainerRequest}},
+    proxmox::{
+        client::ProxmoxClient,
+        types::{ContainerMetrics, CreateContainerRequest},
+    },
     services::audit_service::AuditService,
     utils::error::ApiError,
 };
@@ -30,19 +33,34 @@ impl ContainerService {
         containers: Arc<dyn ContainerRepo>,
         audit: Arc<AuditService>,
     ) -> Self {
-        Self { proxmox, containers, audit }
+        Self {
+            proxmox,
+            containers,
+            audit,
+        }
     }
 
     /// Lists containers visible to the current actor.
-    pub async fn list_for_user(&self, actor: &AuthenticatedUser) -> Result<Vec<ContainerRecord>, ApiError> {
+    pub async fn list_for_user(
+        &self,
+        actor: &AuthenticatedUser,
+    ) -> Result<Vec<ContainerRecord>, ApiError> {
         self.containers.list_for_user(actor.user_id).await
     }
 
     /// Loads a single container by id with access check.
-    pub async fn get(&self, actor: &AuthenticatedUser, container_id: Uuid) -> Result<ContainerRecord, ApiError> {
-        let container = self.containers.get(container_id).await?
+    pub async fn get(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<ContainerRecord, ApiError> {
+        let container = self
+            .containers
+            .get(container_id)
+            .await?
             .ok_or_else(|| ApiError::container_not_found(container_id.to_string()))?;
-        self.require_access(actor, container_id, AccessLevel::Viewer).await?;
+        self.require_access(actor, container_id, AccessLevel::Viewer)
+            .await?;
         Ok(container)
     }
 
@@ -55,7 +73,11 @@ impl ContainerService {
     ///
     /// After the container starts, a random root password is set via the
     /// Proxmox API and returned to the caller (it is **not** persisted).
-    pub async fn create(&self, actor: &AuthenticatedUser, request: CreateContainerRequest) -> Result<CreateContainerResult, ApiError> {
+    pub async fn create(
+        &self,
+        actor: &AuthenticatedUser,
+        request: CreateContainerRequest,
+    ) -> Result<CreateContainerResult, ApiError> {
         let node_name = request.node_name.clone();
         let hostname = request.hostname.clone();
         let ctid = self.proxmox.create_container(request).await?;
@@ -69,7 +91,9 @@ impl ContainerService {
             created_at: Utc::now(),
         };
         self.containers.create(&record, actor.user_id).await?;
-        self.audit.log_success(Some(actor.user_id), Some(record.id), "container.create").await;
+        self.audit
+            .log_success(Some(actor.user_id), Some(record.id), "container.create")
+            .await;
 
         // Generate a random password for the container root user.
         let password = generate_password(24);
@@ -78,11 +102,15 @@ impl ContainerService {
         // Attempt to start the container and transition to Running.
         match self.proxmox.start_container(ctid).await {
             Ok(()) => {
-                self.containers.update_state(record.id, ContainerState::Running).await?;
+                self.containers
+                    .update_state(record.id, ContainerState::Running)
+                    .await?;
 
                 // Set the root password via the Proxmox API.
                 match self.proxmox.set_container_password(ctid, &password).await {
-                    Ok(()) => { password_set = true; }
+                    Ok(()) => {
+                        password_set = true;
+                    }
                     Err(e) => {
                         warn!(ctid, error = %e.message, "failed to set container root password");
                     }
@@ -90,12 +118,17 @@ impl ContainerService {
             }
             Err(e) => {
                 warn!(ctid, error = %e.message, "failed to auto-start container after creation");
-                self.containers.update_state(record.id, ContainerState::Failed).await?;
+                self.containers
+                    .update_state(record.id, ContainerState::Failed)
+                    .await?;
             }
         }
 
         // Re-fetch to return the updated state.
-        let container = self.containers.get(record.id).await?
+        let container = self
+            .containers
+            .get(record.id)
+            .await?
             .ok_or_else(|| ApiError::internal("container disappeared after creation"))?;
 
         Ok(CreateContainerResult {
@@ -105,37 +138,70 @@ impl ContainerService {
     }
 
     /// Starts a container after ownership is validated.
-    pub async fn start(&self, actor: &AuthenticatedUser, container_id: Uuid) -> Result<(), ApiError> {
+    pub async fn start(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<(), ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator).await?;
+        self.require_access(actor, container_id, AccessLevel::Operator)
+            .await?;
         self.proxmox.start_container(container.proxmox_ctid).await?;
-        self.containers.update_state(container_id, ContainerState::Running).await?;
-        self.audit.log_success(Some(actor.user_id), Some(container_id), "container.start").await;
+        self.containers
+            .update_state(container_id, ContainerState::Running)
+            .await?;
+        self.audit
+            .log_success(Some(actor.user_id), Some(container_id), "container.start")
+            .await;
         Ok(())
     }
 
     /// Stops a container after ownership is validated.
-    pub async fn stop(&self, actor: &AuthenticatedUser, container_id: Uuid) -> Result<(), ApiError> {
+    pub async fn stop(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<(), ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator).await?;
+        self.require_access(actor, container_id, AccessLevel::Operator)
+            .await?;
         self.proxmox.stop_container(container.proxmox_ctid).await?;
-        self.containers.update_state(container_id, ContainerState::Stopped).await?;
-        self.audit.log_success(Some(actor.user_id), Some(container_id), "container.stop").await;
+        self.containers
+            .update_state(container_id, ContainerState::Stopped)
+            .await?;
+        self.audit
+            .log_success(Some(actor.user_id), Some(container_id), "container.stop")
+            .await;
         Ok(())
     }
 
     /// Restarts a container after ownership is validated.
-    pub async fn restart(&self, actor: &AuthenticatedUser, container_id: Uuid) -> Result<(), ApiError> {
+    pub async fn restart(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<(), ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator).await?;
-        self.proxmox.restart_container(container.proxmox_ctid).await?;
-        self.containers.update_state(container_id, ContainerState::Running).await?;
-        self.audit.log_success(Some(actor.user_id), Some(container_id), "container.restart").await;
+        self.require_access(actor, container_id, AccessLevel::Operator)
+            .await?;
+        self.proxmox
+            .restart_container(container.proxmox_ctid)
+            .await?;
+        self.containers
+            .update_state(container_id, ContainerState::Running)
+            .await?;
+        self.audit
+            .log_success(Some(actor.user_id), Some(container_id), "container.restart")
+            .await;
         Ok(())
     }
 
     /// Retrieves metrics for a container that belongs to the current actor.
-    pub async fn metrics(&self, actor: &AuthenticatedUser, container_id: Uuid) -> Result<ContainerMetrics, ApiError> {
+    pub async fn metrics(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<ContainerMetrics, ApiError> {
         let container = self.get(actor, container_id).await?;
         self.proxmox.container_metrics(container.proxmox_ctid).await
     }
@@ -151,18 +217,27 @@ impl ContainerService {
     }
 
     /// Checks that the actor has the required access level to a container.
-    async fn require_access(&self, actor: &AuthenticatedUser, container_id: Uuid, minimum: AccessLevel) -> Result<(), ApiError> {
+    async fn require_access(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+        minimum: AccessLevel,
+    ) -> Result<(), ApiError> {
         if actor.role == crate::models::user::UserRole::Admin {
             return Ok(());
         }
-        let has_access = self.containers.check_access(container_id, actor.user_id, minimum).await?;
+        let has_access = self
+            .containers
+            .check_access(container_id, actor.user_id, minimum)
+            .await?;
         if !has_access {
-            return Err(ApiError::forbidden("You do not have access to this container"));
+            return Err(ApiError::forbidden(
+                "You do not have access to this container",
+            ));
         }
         Ok(())
     }
 }
-
 
 /// Generates a cryptographically random alphanumeric password of the given length.
 fn generate_password(len: usize) -> String {

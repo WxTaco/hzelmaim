@@ -34,9 +34,16 @@ impl CommandService {
     }
 
     /// Validates command input and enqueues it for asynchronous execution.
-    pub async fn enqueue(&self, actor: &AuthenticatedUser, request: CommandRequest) -> Result<CommandExecutionRecord, ApiError> {
+    pub async fn enqueue(
+        &self,
+        actor: &AuthenticatedUser,
+        request: CommandRequest,
+    ) -> Result<CommandExecutionRecord, ApiError> {
         validate_token(&request.program)?;
-        request.args.iter().try_for_each(|arg| validate_token(arg))?;
+        request
+            .args
+            .iter()
+            .try_for_each(|arg| validate_token(arg))?;
 
         let record = CommandExecutionRecord {
             id: Uuid::new_v4(),
@@ -51,22 +58,37 @@ impl CommandService {
         };
 
         self.commands.insert(&record).await?;
-        self.audit.log_success(Some(actor.user_id), Some(record.container_id), "command.enqueue").await;
+        self.audit
+            .log_success(
+                Some(actor.user_id),
+                Some(record.container_id),
+                "command.enqueue",
+            )
+            .await;
         Ok(record)
     }
 
     /// Retrieves a previously queued command job.
     pub async fn get(&self, job_id: Uuid) -> Result<CommandExecutionRecord, ApiError> {
-        self.commands.get(job_id).await?.ok_or_else(|| ApiError::command_not_found(job_id.to_string()))
+        self.commands
+            .get(job_id)
+            .await?
+            .ok_or_else(|| ApiError::command_not_found(job_id.to_string()))
     }
 }
 
 /// Ensures command components remain tokenized and shell-safe.
 fn validate_token(token: &str) -> Result<(), ApiError> {
     let allowed = "_-./:=@";
-    if !token.is_empty() && token.chars().all(|c| c.is_ascii_alphanumeric() || allowed.contains(c)) {
+    if !token.is_empty()
+        && token
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || allowed.contains(c))
+    {
         Ok(())
     } else {
-        Err(ApiError::validation("Command tokens may only contain safe non-shell characters"))
+        Err(ApiError::validation(
+            "Command tokens may only contain safe non-shell characters",
+        ))
     }
 }

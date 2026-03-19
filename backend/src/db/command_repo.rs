@@ -20,10 +20,19 @@ pub trait CommandRepo: Send + Sync {
     async fn get(&self, job_id: Uuid) -> Result<Option<CommandExecutionRecord>, ApiError>;
 
     /// Updates the status, stdout, and stderr of a command execution.
-    async fn update_result(&self, job_id: Uuid, status: CommandExecutionStatus, stdout: &str, stderr: &str) -> Result<(), ApiError>;
+    async fn update_result(
+        &self,
+        job_id: Uuid,
+        status: CommandExecutionStatus,
+        stdout: &str,
+        stderr: &str,
+    ) -> Result<(), ApiError>;
 
     /// Lists command executions for a container ordered by creation time.
-    async fn list_for_container(&self, container_id: Uuid) -> Result<Vec<CommandExecutionRecord>, ApiError>;
+    async fn list_for_container(
+        &self,
+        container_id: Uuid,
+    ) -> Result<Vec<CommandExecutionRecord>, ApiError>;
 }
 
 /// PostgreSQL implementation of the command repository.
@@ -121,7 +130,13 @@ impl CommandRepo for PgCommandRepo {
         Ok(row.map(Into::into))
     }
 
-    async fn update_result(&self, job_id: Uuid, status: CommandExecutionStatus, stdout: &str, stderr: &str) -> Result<(), ApiError> {
+    async fn update_result(
+        &self,
+        job_id: Uuid,
+        status: CommandExecutionStatus,
+        stdout: &str,
+        stderr: &str,
+    ) -> Result<(), ApiError> {
         sqlx::query(
             "UPDATE command_execution_logs SET status = $1, stdout = $2, stderr = $3 WHERE id = $4",
         )
@@ -135,7 +150,10 @@ impl CommandRepo for PgCommandRepo {
         Ok(())
     }
 
-    async fn list_for_container(&self, container_id: Uuid) -> Result<Vec<CommandExecutionRecord>, ApiError> {
+    async fn list_for_container(
+        &self,
+        container_id: Uuid,
+    ) -> Result<Vec<CommandExecutionRecord>, ApiError> {
         let rows = sqlx::query_as::<_, CommandRow>(
             "SELECT id, container_id, requested_by, program, args, status, stdout, stderr, created_at FROM command_execution_logs WHERE container_id = $1 ORDER BY created_at DESC",
         )
@@ -146,4 +164,3 @@ impl CommandRepo for PgCommandRepo {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 }
-

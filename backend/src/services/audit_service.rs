@@ -22,7 +22,12 @@ impl AuditService {
     }
 
     /// Records a successful security-sensitive event.
-    pub async fn log_success(&self, user_id: Option<Uuid>, container_id: Option<Uuid>, action: &str) {
+    pub async fn log_success(
+        &self,
+        user_id: Option<Uuid>,
+        container_id: Option<Uuid>,
+        action: &str,
+    ) {
         info!(user_id = ?user_id, container_id = ?container_id, action, outcome = "success", "audit event");
         let record = AuditLogRecord {
             id: Uuid::new_v4(),
@@ -39,7 +44,13 @@ impl AuditService {
     }
 
     /// Records a failed security-sensitive event.
-    pub async fn log_failure(&self, user_id: Option<Uuid>, container_id: Option<Uuid>, action: &str, reason: &str) {
+    pub async fn log_failure(
+        &self,
+        user_id: Option<Uuid>,
+        container_id: Option<Uuid>,
+        action: &str,
+        reason: &str,
+    ) {
         error!(user_id = ?user_id, container_id = ?container_id, action, outcome = "failure", reason, "audit event");
         let record = AuditLogRecord {
             id: Uuid::new_v4(),

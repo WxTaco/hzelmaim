@@ -23,4 +23,3 @@ pub async fn create_pool(database_url: &str) -> Result<Pool, sqlx::Error> {
 pub async fn run_migrations(pool: &Pool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./migrations").run(pool).await
 }
-

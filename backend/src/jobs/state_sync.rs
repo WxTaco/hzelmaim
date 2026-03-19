@@ -29,7 +29,10 @@ pub fn spawn_state_sync(
         // Don't pile up ticks if a sync round takes longer than the interval.
         ticker.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
 
-        info!(interval_secs = interval.as_secs(), "state sync task started");
+        info!(
+            interval_secs = interval.as_secs(),
+            "state sync task started"
+        );
 
         loop {
             ticker.tick().await;
@@ -39,10 +42,7 @@ pub fn spawn_state_sync(
 }
 
 /// Single reconciliation pass.
-async fn sync_once(
-    containers: &Arc<dyn ContainerRepo>,
-    proxmox: &Arc<dyn ProxmoxClient>,
-) {
+async fn sync_once(containers: &Arc<dyn ContainerRepo>, proxmox: &Arc<dyn ProxmoxClient>) {
     let all = match containers.list_all().await {
         Ok(list) => list,
         Err(e) => {
@@ -102,4 +102,3 @@ async fn sync_once(
         }
     }
 }
-

@@ -61,8 +61,12 @@ impl SessionService {
     }
 
     /// Authenticates a request using the configured session cookie.
-    pub async fn authenticate_headers(&self, headers: &HeaderMap) -> Result<AuthenticatedSession, ApiError> {
-        let session_token = extract_cookie(headers, &self.config.cookie_name).ok_or_else(ApiError::unauthorized)?;
+    pub async fn authenticate_headers(
+        &self,
+        headers: &HeaderMap,
+    ) -> Result<AuthenticatedSession, ApiError> {
+        let session_token =
+            extract_cookie(headers, &self.config.cookie_name).ok_or_else(ApiError::unauthorized)?;
         let session_id = Uuid::parse_str(&session_token).map_err(|_| ApiError::unauthorized())?;
 
         let session = self
@@ -119,9 +123,11 @@ pub fn extract_cookie(headers: &HeaderMap, cookie_name: &str) -> Option<String> 
         .get(axum::http::header::COOKIE)
         .and_then(|header| header.to_str().ok())
         .and_then(|raw| {
-            raw.split(';')
-                .map(str::trim)
-                .find_map(|entry| entry.split_once('=').and_then(|(name, value)| (name == cookie_name).then(|| value.to_string())))
+            raw.split(';').map(str::trim).find_map(|entry| {
+                entry
+                    .split_once('=')
+                    .and_then(|(name, value)| (name == cookie_name).then(|| value.to_string()))
+            })
         })
 }
 
@@ -134,9 +140,15 @@ mod tests {
     #[test]
     fn extracts_cookie_by_name() {
         let mut headers = HeaderMap::new();
-        headers.insert(COOKIE, HeaderValue::from_static("foo=bar; __Host-hzel_session=abc123; theme=dark"));
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_static("foo=bar; __Host-hzel_session=abc123; theme=dark"),
+        );
 
-        assert_eq!(extract_cookie(&headers, "__Host-hzel_session"), Some("abc123".into()));
+        assert_eq!(
+            extract_cookie(&headers, "__Host-hzel_session"),
+            Some("abc123".into())
+        );
     }
 
     #[test]
