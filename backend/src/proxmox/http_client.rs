@@ -139,6 +139,10 @@ impl ProxmoxClient for HttpProxmoxClient {
             .parse()
             .map_err(|e| ApiError::internal(format!("Invalid VMID: {e}")))?;
 
+        // Wait for the template CT to be free before cloning — Proxmox locks it
+        // for the duration of any full clone task spawned from it.
+        self.wait_for_unlock(request.template_ctid, 120).await?;
+
         // Clone from the template container.
         let params = vec![
             ("newid".to_string(), vmid.to_string()),
