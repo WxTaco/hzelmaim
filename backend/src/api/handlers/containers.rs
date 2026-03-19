@@ -24,6 +24,11 @@ pub async fn list(State(state): State<AppState>, actor: AuthenticatedUser) -> Re
 
 /// Creates a new secure unprivileged LXC container.
 pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<CreateContainerResult>>, ApiError> {
+    let disk_gb = body.disk_gb.unwrap_or(16);
+    if !(16..=32).contains(&disk_gb) {
+        return Err(ApiError::validation("disk_gb must be between 16 and 32"));
+    }
+
     let request = CreateContainerRequest {
         node_name: state.config.proxmox_node.clone(),
         hostname: body.hostname,
@@ -31,7 +36,7 @@ pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: 
         resource_limits: ResourceLimits {
             cpu_cores: body.cpu_cores.unwrap_or(1),
             memory_mb: body.memory_mb.unwrap_or(512),
-            disk_gb: body.disk_gb.unwrap_or(8),
+            disk_gb,
         },
         ssh_public_keys: vec![],
     };
