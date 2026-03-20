@@ -7,4 +7,3 @@ backend/target/
 keys/
 .turbo/
 .next/
-docker-compose.yml
