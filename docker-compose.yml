@@ -1,0 +1,99 @@
+  services:
+    db:
+      image: postgres:16-alpine
+      restart: unless-stopped
+      environment:
+        POSTGRES_USER:     ${POSTGRES_USER:-hzel}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hzel}
+        POSTGRES_DB:       ${POSTGRES_DB:-hzel}
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      networks:
+        - internal
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hzel} -d ${POSTGRES_DB:-hzel}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 15s
+        
+    backend:
+      build:
+        context: ./backend
+        dockerfile: Dockerfile
+      restart: unless-stopped
+      ports:
+        - "8081:8081"
+      environment:
+        # Server
+        PORT:            8081
+        PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8081}
+
+        # Database connection string
+        DATABASE_URL: postgres://${POSTGRES_USER:-hzel}:${POSTGRES_PASSWORD:-hzel}@db:5432/${POSTGRES_DB:-hzel}
+
+        # Proxmox API
+        PROXMOX_API_URL:          ${PROXMOX_API_URL:-https://proxmox.example.internal:8006/api2/json}
+        PROXMOX_API_TOKEN_ID:     ${PROXMOX_API_TOKEN_ID:-root@pam!hzel}
+        PROXMOX_API_TOKEN_SECRET: ${PROXMOX_API_TOKEN_SECRET:-}
+        PROXMOX_NODE:             ${PROXMOX_NODE:-pve}
+        PROXMOX_TEMPLATE_CTID:    ${PROXMOX_TEMPLATE_CTID:-1000}
+        PROXMOX_STORAGE:          ${PROXMOX_STORAGE:-local-lvm}
+        PROXMOX_BRIDGE:           ${PROXMOX_BRIDGE:-vmbr0}
+
+        # Cloudflare access credentials for when Proxmox is behind an access application
+        CF_ACCESS_CLIENT_ID:     ${CF_ACCESS_CLIENT_ID:-}
+        CF_ACCESS_CLIENT_SECRET: ${CF_ACCESS_CLIENT_SECRET:-}
+        # Keys path inside the container for SSH CA
+        SSH_CA_PRIVATE_KEY_PATH: /app/keys/ca
+        SSH_USER:                ${SSH_USER:-root}
+        SSH_PORT:                ${SSH_PORT:-22}
+
+        # OIDC
+        OIDC_ENABLED:       ${OIDC_ENABLED:-false}
+        OIDC_ISSUER_URL:    ${OIDC_ISSUER_URL:-}
+        OIDC_CLIENT_ID:     ${OIDC_CLIENT_ID:-}
+        OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+        OIDC_REDIRECT_URI:  ${OIDC_REDIRECT_URI:-}
+
+        # JWT
+        JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+        # Dev helpers
+        BOOTSTRAP_DEV_SESSION: ${BOOTSTRAP_DEV_SESSION:-false}
+
+        # Logging (already set in Dockerfile, but can be overridden here)
+        RUST_LOG: ${RUST_LOG:-info,hzel_backend=debug}
+
+      # Mount the repo-level keys/ directory so the backend can read the SSH CA
+      # key from /app/keys/ca (matching SSH_CA_PRIVATE_KEY_PATH above).
+      # Generate the key with: ssh-keygen -t ed25519 -f keys/ca -N ""
+      volumes:
+        - ./keys:/app/keys:ro
+      networks:
+        - internal
+      depends_on:
+        db:
+          condition: service_healthy
+          
+    frontend:
+      build:
+        context: ./apps/dashboard
+        dockerfile: Dockerfile
+        args:
+          # NEXT_PUBLIC_API_URL is baked into the JS bundle at build time
+          # It must be the URL the *browser* uses to reach the backend API
+          NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8081}
+      restart: unless-stopped
+      ports:
+        - "3000:3000"
+      networks:
+        - internal
+      depends_on:
+        - backend
+        
+  networks:
+    internal:
+      driver: bridge   
+  
+  volumes:
+    postgres_data:     # persistent PostgreSQL data directory
