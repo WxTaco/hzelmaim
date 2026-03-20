@@ -5,6 +5,16 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { storeTokens } from "@/lib/auth";
 
+/** Extracts display_name from a raw JWT string without hitting localStorage. */
+function extractDisplayName(jwt: string): string | null {
+  try {
+    const payload = JSON.parse(atob(jwt.split(".")[1]));
+    return (payload.display_name as string | null | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function CallbackHandler() {
   const params = useSearchParams();
   const router = useRouter();
@@ -15,6 +25,10 @@ export function CallbackHandler() {
   const hasTokens = Boolean(access && refresh);
 
   const [success, setSuccess] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  // Flips true ~900 ms after success so the text swaps after the checkmark
+  // finishes drawing (circle 0–500 ms, tick 400–800 ms → swap at 900 ms).
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     if (!hasTokens) return;
@@ -23,15 +37,25 @@ export function CallbackHandler() {
     // Minimum time to show the spinner so it always feels intentional.
     const MIN_SPINNER_MS = 1400;
 
+    let welcomeTimer: ReturnType<typeof setTimeout>;
+    let navTimer: ReturnType<typeof setTimeout>;
+
     const timer = setTimeout(() => {
       storeTokens(access!, refresh!);
+      setDisplayName(extractDisplayName(access!));
       setSuccess(true);
 
-      // Hold the fully-drawn checkmark for 2.5s before navigating away.
-      setTimeout(() => router.replace("/dashboard"), 2500);
+      // Swap text just after the checkmark finishes drawing.
+      welcomeTimer = setTimeout(() => setShowWelcome(true), 900);
+      // Hold the success screen briefly before navigating.
+      navTimer = setTimeout(() => router.replace("/dashboard"), 2500);
     }, Math.max(MIN_SPINNER_MS - (Date.now() - mountedAt), MIN_SPINNER_MS));
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(welcomeTimer);
+      clearTimeout(navTimer);
+    };
   }, [hasTokens, access, refresh, router]);
 
   return (
@@ -102,14 +126,30 @@ export function CallbackHandler() {
             className="flex flex-col items-center gap-5"
           >
             <CheckmarkCircle />
-            <motion.p
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-sm text-muted-foreground"
-            >
-              Signed in — taking you to your dashboard
-            </motion.p>
+            <AnimatePresence mode="wait">
+              {!showWelcome ? (
+                <motion.p
+                  key="signed-in"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ delay: 0.4, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="text-sm text-muted-foreground"
+                >
+                  Successfully signed in
+                </motion.p>
+              ) : (
+                <motion.p
+                  key="welcome"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="text-sm text-foreground"
+                >
+                  Welcome back{displayName ? `, ${displayName}` : ""}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
@@ -145,32 +185,39 @@ function SpinnerRing() {
   );
 }
 
+// Green that reads clearly against the dark background and feels like success.
+const SUCCESS_GREEN = "oklch(0.72 0.20 148)";
+
 function CheckmarkCircle() {
   return (
     <div className="relative w-14 h-14">
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        {/* Circle drawing in */}
+        {/* Circle draws in with the primary colour, then shifts to green the
+            moment the checkmark starts — so the whole icon lands on green. */}
         <motion.circle
           cx="28"
           cy="28"
           r="22"
-          stroke="currentColor"
           strokeWidth="2.5"
           strokeLinecap="round"
-          className="text-primary"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          fill="none"
+          initial={{ pathLength: 0, opacity: 0, stroke: "oklch(0.62 0.22 264)" }}
+          animate={{ pathLength: 1, opacity: 1, stroke: SUCCESS_GREEN }}
+          transition={{
+            pathLength: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+            opacity:    { duration: 0.5 },
+            stroke:     { delay: 0.4, duration: 0.3 },
+          }}
           style={{ rotate: -90, transformOrigin: "28px 28px" }}
         />
-        {/* Checkmark drawing in */}
+        {/* Checkmark is green from its very first stroke. */}
         <motion.path
           d="M18 28l7 7 13-13"
-          stroke="currentColor"
+          stroke={SUCCESS_GREEN}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-primary"
+          fill="none"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}

@@ -3,6 +3,8 @@
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
+    display_name TEXT,
+    picture_url  TEXT,
     role TEXT NOT NULL CHECK (role IN ('admin', 'user')),
     status TEXT NOT NULL CHECK (status IN ('active', 'disabled')) DEFAULT 'active',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

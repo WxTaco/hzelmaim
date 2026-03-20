@@ -71,10 +71,13 @@ pub async fn oidc_callback(
         .ok_or_else(|| ApiError::unauthorized())?;
 
     // Generate JWT tokens
-    let access_token =
-        state
-            .jwt_service
-            .generate_access_token(session.user_id, user.email.clone(), session.id)?;
+    let access_token = state.jwt_service.generate_access_token(
+        session.user_id,
+        user.email.clone(),
+        user.display_name.clone(),
+        user.picture_url.clone(),
+        session.id,
+    )?;
 
     let refresh_token = state
         .jwt_service
@@ -118,9 +121,13 @@ pub async fn refresh_token(
         .ok_or_else(|| ApiError::unauthorized())?;
 
     // Generate new access token
-    let access_token = state
-        .jwt_service
-        .generate_access_token(user_id, user.email, session_id)?;
+    let access_token = state.jwt_service.generate_access_token(
+        user_id,
+        user.email,
+        user.display_name,
+        user.picture_url,
+        session_id,
+    )?;
 
     Ok(Json(ApiResponse::new(TokenResponse {
         access_token,

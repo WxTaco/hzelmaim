@@ -156,12 +156,30 @@ impl OidcService {
             .map(|e| e.to_string())
             .unwrap_or_else(|| format!("{}@oidc", subject));
 
+        // Extract profile fields from the `profile` scope claims.
+        // `LocalizedClaim::get(None)` returns the unlocalized (default) entry,
+        // which is what Pocket ID populates when no language tag is present.
+        let display_name = claims
+            .name()
+            .and_then(|m| m.get(None))
+            .map(|n: &openidconnect::EndUserName| n.to_string());
+        let picture_url = claims
+            .picture()
+            .and_then(|m| m.get(None))
+            .map(|url: &openidconnect::EndUserPictureUrl| url.to_string());
+
         info!(sub = %subject, email = %email, "OIDC login");
 
         // Upsert user from OIDC identity (sub stored in oidc_identities.subject)
         let user = self
             .user_repo
-            .upsert_oidc_identity(&issuer, &subject, &email)
+            .upsert_oidc_identity(
+                &issuer,
+                &subject,
+                &email,
+                display_name.as_deref(),
+                picture_url.as_deref(),
+            )
             .await?;
 
         let now = Utc::now();

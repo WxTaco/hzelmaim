@@ -60,6 +60,8 @@ impl InMemoryAuthStore {
         let user = UserRecord {
             id: Uuid::new_v4(),
             email: "admin@example.internal".into(),
+            display_name: None,
+            picture_url: None,
             role: UserRole::Admin,
             status: UserStatus::Active,
             created_at: now,

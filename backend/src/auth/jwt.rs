@@ -14,6 +14,13 @@ use crate::utils::error::ApiError;
 pub struct AccessTokenClaims {
     pub sub: String, // user_id
     pub email: String,
+    /// Full display name from the OIDC `name` claim. May be absent for
+    /// tokens minted before this field was introduced.
+    #[serde(default)]
+    pub display_name: Option<String>,
+    /// Profile picture URL from the OIDC `picture` claim.
+    #[serde(default)]
+    pub picture_url: Option<String>,
     pub session_id: String,
     pub iat: i64, // issued at
     pub exp: i64, // expiration
@@ -58,12 +65,16 @@ impl JwtService {
         &self,
         user_id: Uuid,
         email: String,
+        display_name: Option<String>,
+        picture_url: Option<String>,
         session_id: Uuid,
     ) -> Result<String, ApiError> {
         let now = Utc::now();
         let claims = AccessTokenClaims {
             sub: user_id.to_string(),
             email,
+            display_name,
+            picture_url,
             session_id: session_id.to_string(),
             iat: now.timestamp(),
             exp: (now + Duration::minutes(self.access_token_ttl_minutes)).timestamp(),

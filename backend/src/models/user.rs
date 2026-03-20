@@ -25,6 +25,10 @@ pub enum UserStatus {
 pub struct UserRecord {
     pub id: Uuid,
     pub email: String,
+    /// Full display name from the OIDC `name` claim (`profile` scope).
+    pub display_name: Option<String>,
+    /// Profile picture URL from the OIDC `picture` claim (`profile` scope).
+    pub picture_url: Option<String>,
     pub role: UserRole,
     pub status: UserStatus,
     pub created_at: DateTime<Utc>,

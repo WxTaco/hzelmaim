@@ -31,6 +31,8 @@ impl PgAuthStore {
 struct UserRow {
     id: Uuid,
     email: String,
+    display_name: Option<String>,
+    picture_url: Option<String>,
     role: String,
     status: String,
     created_at: DateTime<Utc>,
@@ -75,6 +77,8 @@ impl From<UserRow> for UserRecord {
         Self {
             id: row.id,
             email: row.email,
+            display_name: row.display_name,
+            picture_url: row.picture_url,
             role: parse_role(&row.role),
             status: parse_status(&row.status),
             created_at: row.created_at,
@@ -101,7 +105,8 @@ impl From<SessionRow> for SessionRecord {
 impl AuthStore for PgAuthStore {
     async fn get_user(&self, user_id: Uuid) -> Result<Option<UserRecord>, ApiError> {
         let row = sqlx::query_as::<_, UserRow>(
-            "SELECT id, email, role, status, created_at FROM users WHERE id = $1",
+            "SELECT id, email, display_name, picture_url, role, status, created_at \
+             FROM users WHERE id = $1",
         )
         .bind(user_id)
         .fetch_optional(&self.pool)

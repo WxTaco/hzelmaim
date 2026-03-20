@@ -19,15 +19,33 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-export function isAuthenticated(): boolean {
+/** Decoded payload of our access token. */
+export interface TokenClaims {
+  sub: string;
+  email: string;
+  /** Full display name from the Pocket ID `name` claim (`profile` scope). */
+  display_name: string | null;
+  /** Profile picture URL from the Pocket ID `picture` claim (`profile` scope). */
+  picture_url: string | null;
+  session_id: string;
+  iat: number;
+  exp: number;
+}
+
+/** Decodes and returns the current access token's claims, or null if absent/malformed. */
+export function getTokenClaims(): TokenClaims | null {
   const token = getAccessToken();
-  if (!token) return false;
+  if (!token) return null;
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 > Date.now();
+    return JSON.parse(atob(token.split(".")[1])) as TokenClaims;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isAuthenticated(): boolean {
+  const claims = getTokenClaims();
+  return claims !== null && claims.exp * 1000 > Date.now();
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
