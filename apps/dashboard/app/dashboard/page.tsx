@@ -152,10 +152,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="mb-6 h-6 w-28 rounded-lg bg-muted animate-pulse" />
+      <div className="px-6 py-6 max-w-2xl">
+        <div className="mb-5 h-5 w-24 rounded-md bg-muted animate-pulse" />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="mb-3 h-16 rounded-xl bg-muted animate-pulse" />
+          <div key={i} className="mb-2 h-12 rounded-xl bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -163,8 +163,8 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 gap-3 text-center">
-        <ServerCrash className="size-8 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center px-6 py-24 gap-3 text-center max-w-2xl">
+        <ServerCrash className="size-7 text-muted-foreground" />
         <p className="text-sm font-medium">Failed to load containers</p>
         <p className="text-xs text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => { setLoading(true); setError(null); load(); }}>
@@ -175,49 +175,49 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-6 py-6 max-w-2xl">
       <motion.header
-        className="mb-6 flex items-start justify-between gap-4"
+        className="mb-4"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: EASE }}
       >
-        <div>
-          <h1 className="text-base font-semibold tracking-tight">Containers</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+        <h1 className="text-base font-semibold tracking-tight">Containers</h1>
+        <div className="mt-0.5 flex items-center gap-2.5">
+          <p className="text-sm text-muted-foreground">
             {containers.length === 0
-              ? "No containers yet."
+              ? "No containers yet"
               : `${containers.length} container${containers.length !== 1 ? "s" : ""}`}
           </p>
+          <button
+            onClick={() => { setShowCreate((v) => !v); setCreateError(null); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showCreate
+              ? <><X className="size-3" />Cancel</>
+              : <><Plus className="size-3" />New</>}
+          </button>
         </div>
-        <Button
-          size="sm"
-          variant={showCreate ? "outline" : "default"}
-          onClick={() => { setShowCreate((v) => !v); setCreateError(null); }}
-        >
-          {showCreate ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
-          {showCreate ? "Cancel" : "New"}
-        </Button>
       </motion.header>
 
       {/* One-time password banner */}
       <AnimatePresence>
         {createdPassword && (
           <motion.div
-            initial={{ opacity: 0, y: -6, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -6, height: 0 }}
-            transition={{ duration: 0.35, ease: EASE }}
-            className="mb-4 overflow-hidden"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="mb-3 overflow-hidden"
           >
-            <div className="flex items-start gap-3 rounded-xl bg-amber-500/8 ring-1 ring-amber-500/25 px-4 py-3">
-              <KeyRound className="size-4 text-amber-500 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 rounded-xl bg-amber-500/8 ring-1 ring-amber-500/20 px-4 py-3">
+              <KeyRound className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Save your root password — it won&apos;t be shown again</p>
-                <p className="mt-1 font-mono text-sm break-all">{createdPassword}</p>
+                <p className="mt-1 font-mono text-xs break-all">{createdPassword}</p>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="ghost" size="icon-sm" onClick={copyPassword} title="Copy password">
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon-sm" onClick={copyPassword} title="Copy">
                   {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
                 </Button>
                 <Button variant="ghost" size="icon-sm" onClick={() => setCreatedPassword(null)} title="Dismiss">
@@ -234,13 +234,13 @@ export default function DashboardPage() {
         {showCreate && (
           <motion.form
             onSubmit={submitCreate}
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            transition={{ duration: 0.35, ease: EASE }}
-            className="mb-5 overflow-hidden"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="mb-3 overflow-hidden"
           >
-            <div className="rounded-xl bg-card ring-1 ring-foreground/10 px-5 py-4 flex flex-col gap-4">
+            <div className="rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-4 flex flex-col gap-3.5">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="hostname">Hostname</Label>
                 <Input
@@ -252,15 +252,13 @@ export default function DashboardPage() {
                   autoFocus
                 />
               </div>
-
               <OptionGroup
-                label="CPU Cores"
+                label="CPU"
                 options={[1, 2, 4, 8] as const}
                 value={cpuCores}
                 onChange={setCpuCores}
                 format={(v) => `${v} core${v !== 1 ? "s" : ""}`}
               />
-
               <OptionGroup
                 label="Memory"
                 options={[512, 1024, 2048, 4096] as const}
@@ -268,7 +266,6 @@ export default function DashboardPage() {
                 onChange={setMemoryMb}
                 format={(v) => v >= 1024 ? `${v / 1024} GB` : `${v} MB`}
               />
-
               <OptionGroup
                 label="Disk"
                 options={[16, 20, 24, 32] as const}
@@ -276,11 +273,7 @@ export default function DashboardPage() {
                 onChange={setDiskGb}
                 format={(v) => `${v} GB`}
               />
-
-              {createError && (
-                <p className="text-xs text-destructive">{createError}</p>
-              )}
-
+              {createError && <p className="text-xs text-destructive">{createError}</p>}
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={creating}>
                   {creating && <Loader2 className="size-3.5 animate-spin" />}
@@ -299,19 +292,19 @@ export default function DashboardPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.35, ease: EASE }}
         >
-          No containers found.
+          No containers yet.
         </motion.p>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {containers.map((c, i) => {
             const busy = acting.has(c.id);
             return (
               <motion.div
                 key={c.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + i * 0.055, duration: 0.4, ease: EASE }}
-                className="flex items-center gap-4 rounded-xl bg-card ring-1 ring-foreground/10 px-4 py-3"
+                className="flex items-center gap-3 rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-2.5"
               >
                 <Link href={`/dashboard/containers/${c.id}`} className="min-w-0 flex-1 group/link">
                   <p className="text-sm font-medium truncate group-hover/link:underline underline-offset-2">{c.name}</p>
@@ -320,10 +313,13 @@ export default function DashboardPage() {
 
                 <StateBadge state={c.state} />
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
+                  {c.state === "provisioning" && (
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                  )}
                   {c.state === "stopped" && (
                     <Button variant="ghost" size="icon-sm" disabled={busy} onClick={() => doAction(c.id, "start")} title="Start">
-                      {busy ? <Loader2 className="animate-spin" /> : <Play />}
+                      {busy ? <Loader2 className="animate-spin" /> : <Play className="text-green-500" />}
                     </Button>
                   )}
                   {c.state === "running" && (
