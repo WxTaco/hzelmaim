@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { LogOut, User, ChevronDown } from "lucide-react"
 
 import { getTokenClaims, clearTokens } from "@/lib/auth"
@@ -14,12 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-/**
- * Animation easing curve for smooth, natural-feeling transitions.
- * Matches the easing used across the dashboard for visual consistency.
- */
-const EASE = [0.22, 1, 0.36, 1] as const
 
 /**
  * User profile data structure extracted from authentication token.
@@ -115,43 +108,38 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <motion.button
-          className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: EASE }}
-          aria-label="User menu"
-        >
-          {/* Circular avatar with ring border */}
-          <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/20">
-            {profile.pictureUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.pictureUrl}
-                alt={`${label}'s profile picture`}
-                className="size-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span 
-                className="flex size-full items-center justify-center bg-muted text-xs font-medium text-foreground"
-                aria-hidden="true"
-              >
-                {initials(profile.displayName, profile.email)}
-              </span>
-            )}
-          </div>
+      <DropdownMenuTrigger
+        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="User menu"
+      >
+        {/* Circular avatar with ring border */}
+        <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/20">
+          {profile.pictureUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.pictureUrl}
+              alt={`${label}'s profile picture`}
+              className="size-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span 
+              className="flex size-full items-center justify-center bg-muted text-xs font-medium text-foreground"
+              aria-hidden="true"
+            >
+              {initials(profile.displayName, profile.email)}
+            </span>
+          )}
+        </div>
 
-          {/* Display name - hidden on small screens for compact header */}
-          <span className="hidden text-sm font-medium text-foreground sm:inline">
-            {label}
-          </span>
-          <ChevronDown 
-            className="hidden h-4 w-4 text-muted-foreground sm:inline" 
-            aria-hidden="true"
-          />
-        </motion.button>
+        {/* Display name - hidden on small screens for compact header */}
+        <span className="hidden text-sm font-medium text-foreground sm:inline">
+          {label}
+        </span>
+        <ChevronDown 
+          className="hidden h-4 w-4 text-muted-foreground sm:inline" 
+          aria-hidden="true"
+        />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
