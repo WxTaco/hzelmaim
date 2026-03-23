@@ -39,17 +39,12 @@ pub struct ContainerRecord {
     pub proxmox_ctid: i32,
     pub name: String,
     pub node_name: String,
+    /// Provisioned vCPU count, stored at creation time.
+    pub cpu_cores: i16,
+    /// Provisioned RAM in MiB, stored at creation time.
+    pub memory_mb: i32,
+    /// Provisioned disk in GiB, stored at creation time.
+    pub disk_gb: i32,
     pub state: ContainerState,
     pub created_at: DateTime<Utc>,
-}
-
-/// Returned from container creation — includes the container record and a
-/// one-time initial root password that the user should save.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateContainerResult {
-    #[serde(flatten)]
-    pub container: ContainerRecord,
-    /// The randomly generated root password. Only returned once at creation
-    /// time — the backend does not persist it.
-    pub initial_password: Option<String>,
 }

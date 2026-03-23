@@ -11,6 +11,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "hzel",
   description: "Container management dashboard",
+  icons: {
+    icon: { url: "https://content.hzel.org/branding/logo.svg", type: "image/svg+xml" },
+  },
 };
 
 export default function RootLayout({

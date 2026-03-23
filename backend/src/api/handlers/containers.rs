@@ -11,7 +11,7 @@ use crate::{
     api::response::ApiResponse,
     app_state::AppState,
     auth::{context::AuthenticatedUser, csrf::CsrfProtected},
-    models::container::{ContainerRecord, CreateContainerResult},
+    models::container::ContainerRecord,
     proxmox::types::{ContainerMetrics, CreateContainerRequest, ResourceLimits},
     utils::error::ApiError,
 };
@@ -38,10 +38,10 @@ pub async fn list(
 }
 
 /// Creates a new secure unprivileged LXC container.
-pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<CreateContainerResult>>, ApiError> {
-    let disk_gb = body.disk_gb.unwrap_or(16);
-    if !(16..=32).contains(&disk_gb) {
-        return Err(ApiError::validation("disk_gb must be between 16 and 32"));
+pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    let disk_gb = body.disk_gb.unwrap_or(18);
+    if !(18..=32).contains(&disk_gb) {
+        return Err(ApiError::validation("disk_gb must be between 18 and 32"));
     }
 
     let request = CreateContainerRequest {

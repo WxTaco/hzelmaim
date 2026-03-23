@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const LOGO_URL = process.env.NEXT_PUBLIC_LOGO_URL ?? "https://content.hzel.org/branding/logo.svg";
+const WORDMARK_URL = process.env.NEXT_PUBLIC_WORDMARK_URL ?? "https://content.hzel.org/branding/wordmark.svg";
 
 export default function LoginPage() {
   return (
@@ -27,11 +29,10 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="mb-10 text-center"
+          className="mb-10"
         >
-          <span className="text-3xl font-semibold tracking-tight text-foreground">
-            hzel
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={WORDMARK_URL} alt="hzel" className="w-full h-auto" />
         </motion.div>
 
         {/* Card */}

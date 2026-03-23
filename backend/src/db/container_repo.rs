@@ -56,6 +56,9 @@ struct ContainerRow {
     proxmox_ctid: i32,
     node_name: String,
     name: String,
+    cpu_cores: i16,
+    memory_mb: i32,
+    disk_gb: i32,
     state: String,
     created_at: DateTime<Utc>,
 }
@@ -85,6 +88,9 @@ impl From<ContainerRow> for ContainerRecord {
             proxmox_ctid: row.proxmox_ctid,
             name: row.name,
             node_name: row.node_name,
+            cpu_cores: row.cpu_cores,
+            memory_mb: row.memory_mb,
+            disk_gb: row.disk_gb,
             state: parse_state(&row.state),
             created_at: row.created_at,
         }
@@ -95,7 +101,8 @@ impl From<ContainerRow> for ContainerRecord {
 impl ContainerRepo for PgContainerRepo {
     async fn list_all(&self) -> Result<Vec<ContainerRecord>, ApiError> {
         let rows = sqlx::query_as::<_, ContainerRow>(
-            "SELECT id, proxmox_ctid, node_name, name, state, created_at FROM containers ORDER BY created_at DESC",
+            "SELECT id, proxmox_ctid, node_name, name, cpu_cores, memory_mb, disk_gb, state, created_at \
+             FROM containers ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
         .await
@@ -106,7 +113,9 @@ impl ContainerRepo for PgContainerRepo {
 
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<ContainerRecord>, ApiError> {
         let rows = sqlx::query_as::<_, ContainerRow>(
-            r#"SELECT c.id, c.proxmox_ctid, c.node_name, c.name, c.state, c.created_at
+            r#"SELECT c.id, c.proxmox_ctid, c.node_name, c.name,
+                      c.cpu_cores, c.memory_mb, c.disk_gb,
+                      c.state, c.created_at
                FROM containers c
                JOIN container_ownerships co ON co.container_id = c.id
                WHERE co.user_id = $1
@@ -122,7 +131,8 @@ impl ContainerRepo for PgContainerRepo {
 
     async fn get(&self, container_id: Uuid) -> Result<Option<ContainerRecord>, ApiError> {
         let row = sqlx::query_as::<_, ContainerRow>(
-            "SELECT id, proxmox_ctid, node_name, name, state, created_at FROM containers WHERE id = $1",
+            "SELECT id, proxmox_ctid, node_name, name, cpu_cores, memory_mb, disk_gb, state, created_at \
+             FROM containers WHERE id = $1",
         )
         .bind(container_id)
         .fetch_optional(&self.pool)
@@ -140,12 +150,17 @@ impl ContainerRepo for PgContainerRepo {
             .map_err(|e| ApiError::internal(format!("Database error: {e}")))?;
 
         sqlx::query(
-            "INSERT INTO containers (id, proxmox_ctid, node_name, name, state, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO containers \
+             (id, proxmox_ctid, node_name, name, cpu_cores, memory_mb, disk_gb, state, created_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         )
         .bind(record.id)
         .bind(record.proxmox_ctid)
         .bind(&record.node_name)
         .bind(&record.name)
+        .bind(record.cpu_cores)
+        .bind(record.memory_mb)
+        .bind(record.disk_gb)
         .bind(state_str(&record.state))
         .bind(record.created_at)
         .execute(&mut *tx)

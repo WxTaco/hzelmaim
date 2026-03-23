@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     auth::context::AuthenticatedUser,
     db::container_repo::ContainerRepo,
-    models::container::{AccessLevel, ContainerRecord, ContainerState, CreateContainerResult},
+    models::container::{AccessLevel, ContainerRecord, ContainerState},
     proxmox::{
         client::ProxmoxClient,
         types::{ContainerMetrics, CreateContainerRequest},
@@ -73,9 +73,14 @@ impl ContainerService {
         &self,
         actor: &AuthenticatedUser,
         request: CreateContainerRequest,
-    ) -> Result<CreateContainerResult, ApiError> {
+    ) -> Result<ContainerRecord, ApiError> {
         let node_name = request.node_name.clone();
         let hostname = request.hostname.clone();
+        // Capture limits before the request is moved into the Proxmox call.
+        let cpu_cores = request.resource_limits.cpu_cores as i16;
+        let memory_mb = request.resource_limits.memory_mb as i32;
+        let disk_gb = request.resource_limits.disk_gb as i32;
+
         let ctid = self.proxmox.create_container(request).await?;
 
         let record = ContainerRecord {
@@ -83,6 +88,9 @@ impl ContainerService {
             proxmox_ctid: ctid,
             name: hostname,
             node_name,
+            cpu_cores,
+            memory_mb,
+            disk_gb,
             state: ContainerState::Provisioning,
             created_at: Utc::now(),
         };
@@ -106,17 +114,11 @@ impl ContainerService {
             }
         }
 
-        // Re-fetch to return the updated state.
-        let container = self
-            .containers
+        // Re-fetch to return the final state.
+        self.containers
             .get(record.id)
             .await?
-            .ok_or_else(|| ApiError::internal("container disappeared after creation"))?;
-
-        Ok(CreateContainerResult {
-            container,
-            initial_password: None,
-        })
+            .ok_or_else(|| ApiError::internal("container disappeared after creation"))
     }
 
     /// Starts a container after ownership is validated.

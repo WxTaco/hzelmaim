@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 // Match the easing used on the login page for a seamless transition feel.
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+const WORDMARK_URL = process.env.NEXT_PUBLIC_WORDMARK_URL ?? "https://content.hzel.org/branding/wordmark.svg";
+
 const NAV_ITEMS = [
   { label: "Containers", href: "/dashboard", icon: Boxes },
   { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
@@ -33,19 +35,20 @@ export function NavBar() {
 
   return (
     <motion.aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r border-border bg-background"
+      className="fixed left-0 top-0 z-40 hidden h-screen w-56 flex-col border-r border-border bg-background md:flex"
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.45, ease: EASE }}
     >
-      {/* Wordmark — mirrors the login page wordmark animation */}
+      {/* Wordmark (includes logo) */}
       <motion.div
-        className="flex h-14 shrink-0 items-center border-b border-border px-5"
+        className="flex h-14 shrink-0 items-center border-b border-border px-4"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: EASE }}
       >
-        <span className="text-base font-semibold tracking-tight">hzel</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={WORDMARK_URL} alt="hzel" className="h-7 w-auto" />
       </motion.div>
 
       {/* Nav items */}

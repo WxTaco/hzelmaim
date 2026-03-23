@@ -63,8 +63,8 @@ export function UserMenu() {
         )}
       </div>
 
-      {/* Display name */}
-      <span className="text-sm text-foreground">{label}</span>
+      {/* Display name — hidden on xs so only the avatar shows on very small screens */}
+      <span className="hidden text-sm text-foreground sm:inline">{label}</span>
     </motion.div>
   );
 }

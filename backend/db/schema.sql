@@ -25,6 +25,9 @@ CREATE TABLE containers (
     proxmox_ctid INTEGER NOT NULL UNIQUE,
     node_name TEXT NOT NULL,
     name TEXT NOT NULL,
+    cpu_cores SMALLINT NOT NULL DEFAULT 1,
+    memory_mb INTEGER NOT NULL DEFAULT 512,
+    disk_gb   INTEGER NOT NULL DEFAULT 18,
     state TEXT NOT NULL CHECK (state IN ('provisioning', 'running', 'stopped', 'failed')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -10,8 +10,9 @@ export default function DashboardLayout({
     <>
       <NavBar />
       <UserMenu />
-      {/* Offset the content area to clear the fixed sidebar (w-56 = 224px). */}
-      <main className="ml-56 flex-1">{children}</main>
+      {/* On md+ offset the content area to clear the fixed sidebar (w-56 = 224px).
+          Below md the sidebar is hidden so no offset is needed. */}
+      <main className="ml-0 flex-1 md:ml-56">{children}</main>
     </>
   );
 }

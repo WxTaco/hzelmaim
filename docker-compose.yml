@@ -80,9 +80,11 @@
         context: ./apps/dashboard
         dockerfile: Dockerfile
         args:
-          # NEXT_PUBLIC_API_URL is baked into the JS bundle at build time
-          # It must be the URL the *browser* uses to reach the backend API
+          # NEXT_PUBLIC_* vars are baked into the JS bundle at build time
+          # They must be the URLs the *browser* uses to reach external services
           NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8081}
+          NEXT_PUBLIC_LOGO_URL: ${NEXT_PUBLIC_LOGO_URL:-https://content.hzel.org/branding/logo.svg}
+          NEXT_PUBLIC_WORDMARK_URL: ${NEXT_PUBLIC_WORDMARK_URL:-https://content.hzel.org/branding/wordmark.svg}
       restart: unless-stopped
       ports:
         - "3000:3000"
