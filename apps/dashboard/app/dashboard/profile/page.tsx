@@ -77,7 +77,7 @@ export default function ProfilePage() {
   const label = profile.displayName ?? profile.email.split("@")[0]
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 pb-12">
+    <div className="mx-auto max-w-2xl space-y-8 pt-8 pb-12">
       {/* Page Header */}
       <div className="flex items-center gap-4">
         <Button
@@ -122,10 +122,6 @@ export default function ProfilePage() {
                     {initials(profile.displayName, profile.email)}
                   </span>
                 )}
-              </div>
-              {/* Online Status Indicator */}
-              <div className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-2 border-card bg-[oklch(0.72_0.20_160)]">
-                <Check className="size-3.5 text-white" />
               </div>
             </div>
 
@@ -201,26 +197,6 @@ export default function ProfilePage() {
                       <Copy className="size-3.5" />
                     )}
                   </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Account Status Field */}
-          <div className="group rounded-xl border border-border bg-card/50 p-4 transition-colors hover:bg-card">
-            <div className="flex items-start gap-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[oklch(0.72_0.20_160)]/10 text-[oklch(0.72_0.20_160)]">
-                <Shield className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Account Status
-                </p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-base font-medium text-[oklch(0.72_0.20_160)]">
-                    <span className="size-2 animate-pulse rounded-full bg-[oklch(0.72_0.20_160)]" />
-                    Active
-                  </span>
                 </div>
               </div>
             </div>
