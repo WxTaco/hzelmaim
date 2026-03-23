@@ -1,19 +1,29 @@
-import { NavBar } from "@/components/nav-bar";
-import { UserMenu } from "@/components/user-menu";
+import { NavBar } from "@/components/nav-bar"
+import { TopHeader } from "@/components/layout/top-header"
+import { cookies } from "next/headers"
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  return (
-    <>
-      <NavBar />
-      <UserMenu />
-      {/* On md+ offset the content area to clear the fixed sidebar (w-56 = 224px).
-          Below md the sidebar is hidden so no offset is needed. */}
-      <main className="ml-0 flex-1 md:ml-56">{children}</main>
-    </>
-  );
-}
+  // Note: In a real app, you'd get the user from session/auth
+  // For now we pass null and let the UserMenu handle client-side token reading
+  const user = null
 
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar - hidden on mobile */}
+      <NavBar />
+
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col md:ml-56">
+        {/* Sticky top header with mobile hamburger and user menu */}
+        <TopHeader user={user} />
+
+        {/* Page content */}
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
+  )
+}
