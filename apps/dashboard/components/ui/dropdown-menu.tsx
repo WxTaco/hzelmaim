@@ -6,7 +6,27 @@ import { cn } from "@/lib/utils"
 
 const DropdownMenu = Menu.Root
 
-const DropdownMenuTrigger = Menu.Trigger
+interface DropdownMenuTriggerProps
+  extends React.ComponentPropsWithoutRef<typeof Menu.Trigger> {
+  asChild?: boolean
+}
+
+const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, DropdownMenuTriggerProps>(
+  ({ asChild, children, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<any>, {
+        ...props,
+        ref,
+      })
+    }
+    return (
+      <Menu.Trigger ref={ref} {...props}>
+        {children}
+      </Menu.Trigger>
+    )
+  }
+)
+DropdownMenuTrigger.displayName = "DropdownMenuTrigger"
 
 const DropdownMenuPortal = Menu.Portal
 
@@ -14,10 +34,11 @@ const DropdownMenuContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof Menu.Popup> & {
     sideOffset?: number
+    align?: "start" | "center" | "end"
   }
->(({ className, sideOffset = 4, ...props }, ref) => (
+>(({ className, sideOffset = 4, align, ...props }, ref) => (
   <Menu.Portal>
-    <Menu.Positioner sideOffset={sideOffset}>
+    <Menu.Positioner sideOffset={sideOffset} align={align}>
       <Menu.Popup
         ref={ref}
         className={cn(

@@ -21,6 +21,10 @@ pub struct AccessTokenClaims {
     /// Profile picture URL from the OIDC `picture` claim.
     #[serde(default)]
     pub picture_url: Option<String>,
+    /// User role ("admin" or "user"). Allows the frontend to gate admin UI
+    /// without an extra round-trip.
+    #[serde(default)]
+    pub role: String,
     pub session_id: String,
     pub iat: i64, // issued at
     pub exp: i64, // expiration
@@ -67,6 +71,7 @@ impl JwtService {
         email: String,
         display_name: Option<String>,
         picture_url: Option<String>,
+        role: String,
         session_id: Uuid,
     ) -> Result<String, ApiError> {
         let now = Utc::now();
@@ -75,6 +80,7 @@ impl JwtService {
             email,
             display_name,
             picture_url,
+            role,
             session_id: session_id.to_string(),
             iat: now.timestamp(),
             exp: (now + Duration::minutes(self.access_token_ttl_minutes)).timestamp(),

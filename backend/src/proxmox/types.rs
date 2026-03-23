@@ -36,7 +36,7 @@ pub struct ContainerInterface {
 }
 
 /// Runtime status returned from Proxmox.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ContainerRuntimeStatus {
     Running,

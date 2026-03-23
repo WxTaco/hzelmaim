@@ -8,7 +8,7 @@ use crate::{
     db::user_repo::UserRepo,
     services::{
         command_service::CommandService, container_service::ContainerService,
-        terminal_service::TerminalService,
+        program_service::ProgramService, terminal_service::TerminalService,
     },
 };
 
@@ -21,6 +21,7 @@ pub struct AppState {
     pub container_service: Arc<ContainerService>,
     pub command_service: Arc<CommandService>,
     pub terminal_service: Arc<TerminalService>,
+    pub program_service: Arc<ProgramService>,
     pub user_repo: Arc<dyn UserRepo>,
     pub oidc_service: Option<Arc<OidcService>>,
 }
@@ -34,6 +35,7 @@ impl AppState {
         container_service: Arc<ContainerService>,
         command_service: Arc<CommandService>,
         terminal_service: Arc<TerminalService>,
+        program_service: Arc<ProgramService>,
         user_repo: Arc<dyn UserRepo>,
         oidc_service: Option<Arc<OidcService>>,
     ) -> Self {
@@ -44,6 +46,7 @@ impl AppState {
             container_service,
             command_service,
             terminal_service,
+            program_service,
             user_repo,
             oidc_service,
         }

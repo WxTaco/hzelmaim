@@ -27,9 +27,16 @@ export interface TokenClaims {
   display_name: string | null;
   /** Profile picture URL from the Pocket ID `picture` claim (`profile` scope). */
   picture_url: string | null;
+  /** User role — `"admin"` or `"user"`. */
+  role: string;
   session_id: string;
   iat: number;
   exp: number;
+}
+
+/** Returns true if the current token belongs to an admin user. */
+export function isAdmin(): boolean {
+  return getTokenClaims()?.role === "admin";
 }
 
 /** Decodes and returns the current access token's claims, or null if absent/malformed. */

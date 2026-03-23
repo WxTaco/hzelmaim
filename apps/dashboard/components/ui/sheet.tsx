@@ -7,7 +7,27 @@ import { X } from "lucide-react"
 
 const Sheet = Dialog.Root
 
-const SheetTrigger = Dialog.Trigger
+interface SheetTriggerProps
+  extends React.ComponentPropsWithoutRef<typeof Dialog.Trigger> {
+  asChild?: boolean
+}
+
+const SheetTrigger = React.forwardRef<HTMLButtonElement, SheetTriggerProps>(
+  ({ asChild, children, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<any>, {
+        ...props,
+        ref,
+      })
+    }
+    return (
+      <Dialog.Trigger ref={ref} {...props}>
+        {children}
+      </Dialog.Trigger>
+    )
+  }
+)
+SheetTrigger.displayName = "SheetTrigger"
 
 const SheetClose = Dialog.Close
 

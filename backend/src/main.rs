@@ -16,13 +16,15 @@ use hzel_backend::{
     config::AppConfig,
     db::{
         self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo,
-        container_repo::PgContainerRepo, pg_auth_store::PgAuthStore, user_repo::PgUserRepo,
+        container_repo::PgContainerRepo, pg_auth_store::PgAuthStore,
+        program_repo::PgProgramRepo, user_repo::PgUserRepo,
     },
     jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
     services::{
         audit_service::AuditService, command_service::CommandService,
-        container_service::ContainerService, terminal_service::TerminalService,
+        container_service::ContainerService, program_service::ProgramService,
+        terminal_service::TerminalService,
     },
     ssh_ca::SshCa,
     utils::logging::init_tracing,
@@ -153,6 +155,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.clone(),
     ));
 
+    // Programs & invitations service.
+    let program_repo = Arc::new(PgProgramRepo::new(pool.clone()));
+    let program_service = Arc::new(ProgramService::new(program_repo));
+
     // OIDC service — initialise if enabled.
     let oidc_service = if config.oidc_enabled {
         let user_repo: Arc<dyn hzel_backend::db::user_repo::UserRepo> =
@@ -177,6 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         container_service,
         command_service,
         terminal_service,
+        program_service,
         user_repo,
         oidc_service,
     );

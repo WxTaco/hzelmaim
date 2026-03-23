@@ -12,6 +12,15 @@ pub enum UserRole {
     User,
 }
 
+impl std::fmt::Display for UserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UserRole::Admin => write!(f, "admin"),
+            UserRole::User => write!(f, "user"),
+        }
+    }
+}
+
 /// Supported user lifecycle states.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

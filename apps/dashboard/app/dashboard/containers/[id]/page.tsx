@@ -7,17 +7,10 @@ import { ArrowLeft, Play, Square, RotateCcw, Loader2, ServerCrash } from "lucide
 import { apiFetch } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { ContainerRecord } from "@/components/dashboard/container-card";
+import { WebTerminal } from "@/components/dashboard/web-terminal";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-
-interface ContainerRecord {
-  id: string;
-  proxmox_ctid: number;
-  name: string;
-  node_name: string;
-  state: "provisioning" | "running" | "stopped" | "failed";
-  created_at: string;
-}
 
 interface ContainerMetrics {
   cpu_percent: number;
@@ -101,9 +94,11 @@ export default function ContainerDetailPage() {
   const doAction = async (action: "start" | "stop" | "restart") => {
     setActing(true);
     try {
-      await apiFetch(`/api/v1/containers/${id}/${action}`, { method: "POST" });
+      const res = await apiFetch<{ data: ContainerRecord }>(`/api/v1/containers/${id}/${action}`, { method: "POST" });
+      // Backend polls Proxmox until the transition is confirmed; update
+      // the displayed record directly from the verified response.
+      setContainer(res.data);
     } finally {
-      await load();
       setActing(false);
     }
   };
@@ -232,6 +227,19 @@ export default function ContainerDetailPage() {
               <p className="text-sm font-medium tabular-nums">{fmtBytes(metrics.network_tx_bytes)}</p>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* Terminal — only available when the container is running */}
+      {container.state === "running" && (
+        <motion.div
+          className="mt-4 rounded-xl bg-card ring-1 ring-foreground/10 px-4 py-4 flex flex-col gap-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.4, ease: EASE }}
+        >
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Terminal</p>
+          <WebTerminal containerId={id} />
         </motion.div>
       )}
     </div>

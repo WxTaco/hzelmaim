@@ -15,6 +15,8 @@ interface ContainerListProps {
   onAction: (id: string, action: "start" | "stop" | "restart") => Promise<void>;
   /** Handler for initiating container creation */
   onCreateClick: () => void;
+  /** Whether the current user is allowed to create containers (default: true) */
+  canCreate?: boolean;
 }
 
 /**
@@ -44,16 +46,17 @@ interface ContainerListProps {
  * />
  * ```
  */
-export function ContainerList({ 
-  containers, 
-  actingIds, 
-  onAction, 
-  onCreateClick 
+export function ContainerList({
+  containers,
+  actingIds,
+  onAction,
+  onCreateClick,
+  canCreate = true,
 }: ContainerListProps) {
   return (
     <div className="flex flex-col gap-2">
-      {/* Creation card - always first in the list with dotted outline */}
-      <CreateContainerCard onCreateClick={onCreateClick} />
+      {/* Creation card - only shown when the user has permission */}
+      {canCreate && <CreateContainerCard onCreateClick={onCreateClick} />}
       
       {/* Existing containers */}
       {containers.map((container, i) => (

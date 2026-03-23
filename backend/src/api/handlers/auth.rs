@@ -76,6 +76,7 @@ pub async fn oidc_callback(
         user.email.clone(),
         user.display_name.clone(),
         user.picture_url.clone(),
+        user.role.to_string().to_lowercase(),
         session.id,
     )?;
 
@@ -126,6 +127,7 @@ pub async fn refresh_token(
         user.email,
         user.display_name,
         user.picture_url,
+        user.role.to_string().to_lowercase(),
         session_id,
     )?;
 

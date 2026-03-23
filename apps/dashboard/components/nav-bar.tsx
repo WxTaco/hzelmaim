@@ -2,11 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Boxes, ScrollText, Settings, X } from "lucide-react"
+import { Boxes, ScrollText, Settings, ShieldCheck, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { Button } from "@/components/ui/button"
+import { isAdmin } from "@/lib/auth"
 
 /**
  * Animation easing curve matching the login page for seamless visual transitions.
@@ -33,15 +35,19 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-/**
- * Array of navigation items displayed in the sidebar.
- * Each item includes a label, href, and icon for consistent navigation UX.
- */
-const NAV_ITEMS: readonly NavItem[] = [
+/** Base navigation items shown to all authenticated users. */
+const BASE_NAV_ITEMS: readonly NavItem[] = [
   { label: "Containers", href: "/dashboard", icon: Boxes },
   { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ] as const
+
+/** Admin-only nav item. */
+const ADMIN_NAV_ITEM: NavItem = {
+  label: "Admin",
+  href: "/dashboard/admin",
+  icon: ShieldCheck,
+}
 
 /**
  * Determines if a navigation item should be marked as active based on current pathname.
@@ -169,10 +175,17 @@ interface NavListProps {
 
 function NavList({ onItemClick }: NavListProps) {
   const pathname = usePathname()
+  const [admin, setAdmin] = useState(false)
+
+  // Read role from the decoded JWT on the client — isAdmin() is synchronous so
+  // it's safe to call inside useEffect (avoids hydration mismatch).
+  useEffect(() => { setAdmin(isAdmin()) }, [])
+
+  const items = admin ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS
 
   return (
     <nav className="flex flex-col gap-0.5 p-3" role="navigation" aria-label="Main navigation">
-      {NAV_ITEMS.map((item, index) => (
+      {items.map((item, index) => (
         <NavLink
           key={item.href}
           item={item}

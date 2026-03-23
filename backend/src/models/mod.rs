@@ -3,5 +3,6 @@
 pub mod audit;
 pub mod command;
 pub mod container;
+pub mod program;
 pub mod session;
 pub mod user;

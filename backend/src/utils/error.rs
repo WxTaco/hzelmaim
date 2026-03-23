@@ -16,6 +16,8 @@ pub enum ApiErrorCode {
     Forbidden,
     CsrfRejected,
     ValidationFailed,
+    NotFound,
+    BadRequest,
     ContainerNotFound,
     CommandNotFound,
     NotImplemented,
@@ -61,6 +63,16 @@ impl ApiError {
             ApiErrorCode::ValidationFailed,
             message,
         )
+    }
+
+    /// Creates a generic not-found response.
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::NOT_FOUND, ApiErrorCode::NotFound, message)
+    }
+
+    /// Creates a generic bad-request response.
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::BAD_REQUEST, ApiErrorCode::BadRequest, message)
     }
 
     /// Creates a missing container response.

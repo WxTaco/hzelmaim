@@ -39,6 +39,14 @@ pub async fn list(
 
 /// Creates a new secure unprivileged LXC container.
 pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    // Check program-based permission — admins always pass, others need an accepted
+    // membership in a program that grants can_create_containers.
+    if !state.program_service.user_can_create_container(&actor).await? {
+        return Err(ApiError::forbidden(
+            "You must be a member of a program that grants container creation access",
+        ));
+    }
+
     let disk_gb = body.disk_gb.unwrap_or(18);
     if !(18..=32).contains(&disk_gb) {
         return Err(ApiError::validation("disk_gb must be between 18 and 32"));
@@ -71,40 +79,55 @@ pub async fn get(
     )))
 }
 
-/// Starts a container.
+/// Starts a container and returns the verified container record.
+///
+/// Polls Proxmox after issuing the start command so that the returned
+/// `state` field reflects the actual runtime state rather than an optimistic
+/// guess. Returns `state: "failed"` if the transition could not be confirmed
+/// within the polling window.
 pub async fn start(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
     State(state): State<AppState>,
     actor: AuthenticatedUser,
-) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    state.container_service.start(&actor, container_id).await?;
-    Ok(Json(ApiResponse::new("queued")))
+) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    let record = state.container_service.start(&actor, container_id).await?;
+    Ok(Json(ApiResponse::new(record)))
 }
 
-/// Stops a container.
+/// Stops a container and returns the verified container record.
+///
+/// Polls Proxmox after issuing the stop command so that the returned
+/// `state` field reflects the actual runtime state rather than an optimistic
+/// guess. Returns `state: "failed"` if the transition could not be confirmed
+/// within the polling window.
 pub async fn stop(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
     State(state): State<AppState>,
     actor: AuthenticatedUser,
-) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    state.container_service.stop(&actor, container_id).await?;
-    Ok(Json(ApiResponse::new("queued")))
+) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    let record = state.container_service.stop(&actor, container_id).await?;
+    Ok(Json(ApiResponse::new(record)))
 }
 
-/// Restarts a container.
+/// Restarts a container and returns the verified container record.
+///
+/// Polls Proxmox after issuing the restart command so that the returned
+/// `state` field reflects the actual runtime state rather than an optimistic
+/// guess. Returns `state: "failed"` if the transition could not be confirmed
+/// within the polling window.
 pub async fn restart(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
     State(state): State<AppState>,
     actor: AuthenticatedUser,
-) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
-    state
+) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
+    let record = state
         .container_service
         .restart(&actor, container_id)
         .await?;
-    Ok(Json(ApiResponse::new("queued")))
+    Ok(Json(ApiResponse::new(record)))
 }
 
 /// Returns container metrics.

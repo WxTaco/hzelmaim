@@ -4,6 +4,7 @@ pub mod audit_repo;
 pub mod command_repo;
 pub mod container_repo;
 pub mod pg_auth_store;
+pub mod program_repo;
 pub mod user_repo;
 
 use sqlx::postgres::PgPoolOptions;

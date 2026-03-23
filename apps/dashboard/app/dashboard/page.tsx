@@ -11,6 +11,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards"
 import { ContainerList } from "@/components/dashboard/container-list"
 import { CreateContainerDialog, type CreateContainerData } from "@/components/dashboard/create-container-dialog"
 import { PasswordBanner } from "@/components/dashboard/password-banner"
+import { InvitationModal, type PendingInvitation } from "@/components/dashboard/invitation-modal"
 import type { ContainerRecord } from "@/components/dashboard/container-card"
 
 /**
@@ -81,9 +82,15 @@ export default function DashboardPage() {
 
   /** Controls create container dialog visibility */
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  
+
   /** Initial password shown after creating a new container */
   const [createdPassword, setCreatedPassword] = useState<string | null>(null)
+
+  /** Pending program invitations shown as a modal on load */
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
+
+  /** Whether the current user is allowed to create containers */
+  const [canCreate, setCanCreate] = useState(false)
 
   /**
    * Computed statistics derived from container list.
@@ -103,8 +110,14 @@ export default function DashboardPage() {
    */
   const load = useCallback(async () => {
     try {
-      const res = await apiFetch<{ data: ContainerRecord[] }>("/api/v1/containers")
-      setContainers(res.data)
+      const [containersRes, invitationsRes, permsRes] = await Promise.all([
+        apiFetch<{ data: ContainerRecord[] }>("/api/v1/containers"),
+        apiFetch<{ data: PendingInvitation[] }>("/api/v1/programs/invitations/pending").catch(() => ({ data: [] as PendingInvitation[] })),
+        apiFetch<{ data: { can_create_containers: boolean } }>("/api/v1/programs/permissions/me").catch(() => ({ data: { can_create_containers: false } })),
+      ])
+      setContainers(containersRes.data)
+      setPendingInvitations(invitationsRes.data)
+      setCanCreate(permsRes.data.can_create_containers)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load containers")
@@ -123,23 +136,24 @@ export default function DashboardPage() {
   /**
    * Performs a container action (start, stop, or restart).
    * Tracks the action in progress via the `acting` set for UI feedback.
-   * Reloads container list after action completes.
-   * 
+   * Updates the container record in-place from the verified state returned
+   * by the API — no extra list refetch needed.
+   *
    * @param id - Container ID to perform action on
    * @param action - Action to perform: 'start', 'stop', or 'restart'
    */
   const doAction = async (id: string, action: "start" | "stop" | "restart") => {
-    // Add to acting set to show loading indicator
     setActing((s) => new Set(s).add(id))
     try {
-      await apiFetch(`/api/v1/containers/${id}/${action}`, { method: "POST" })
+      const res = await apiFetch<{ data: ContainerRecord }>(`/api/v1/containers/${id}/${action}`, { method: "POST" })
+      // The backend polls Proxmox until the state transition is confirmed, so
+      // res.data already contains the verified state — update in-place.
+      setContainers((prev) => prev.map((c) => (c.id === id ? res.data : c)))
     } finally {
-      // Reload containers and remove from acting set
-      await load()
-      setActing((s) => { 
+      setActing((s) => {
         const n = new Set(s)
         n.delete(id)
-        return n 
+        return n
       })
     }
   }
@@ -257,6 +271,7 @@ export default function DashboardPage() {
         actingIds={acting}
         onAction={doAction}
         onCreateClick={() => setShowCreateDialog(true)}
+        canCreate={canCreate}
       />
 
       {/* Create container modal dialog */}
@@ -265,6 +280,14 @@ export default function DashboardPage() {
         onOpenChange={setShowCreateDialog}
         onSubmit={handleCreate}
       />
+
+      {/* Pending program invitation modal */}
+      {pendingInvitations.length > 0 && (
+        <InvitationModal
+          invitations={pendingInvitations}
+          onAllResponded={() => setPendingInvitations([])}
+        />
+      )}
     </div>
   )
 }

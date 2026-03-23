@@ -276,6 +276,17 @@ impl ProxmoxClient for HttpProxmoxClient {
             )));
         }
 
+        // Resize is also an async Proxmox task — wait for it to finish so that
+        // the disk lock is fully released before the caller tries to start the CT.
+        if let Some(upid) = serde_json::from_str::<serde_json::Value>(&resize_body)
+            .ok()
+            .and_then(|v| v["data"].as_str().map(|s| s.to_string()))
+        {
+            info!(vmid, %upid, "resize task started, waiting for completion");
+            self.wait_for_task(&upid, 120).await?;
+            info!(vmid, "resize task complete");
+        }
+
         info!(vmid, "proxmox container cloned and configured");
         Ok(vmid)
     }

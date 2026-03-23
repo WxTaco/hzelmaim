@@ -10,6 +10,9 @@ export interface ContainerRecord {
   proxmox_ctid: number;
   name: string;
   node_name: string;
+  cpu_cores: number;
+  memory_mb: number;
+  disk_gb: number;
   state: "provisioning" | "running" | "stopped" | "failed";
   created_at: string;
 }
