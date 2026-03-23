@@ -81,6 +81,19 @@
   --sidebar-accent-foreground: oklch(0.96 0.005 264);
   --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.62 0.22 264 / 50%);
+  
+  /* Status colors */
+  --status-running: oklch(0.72 0.20 160);
+  --status-running-glow: oklch(0.72 0.20 160 / 20%);
+  --status-stopped: oklch(0.55 0.02 264);
+  --status-provisioning: oklch(0.70 0.18 240);
+  --status-failed: oklch(0.65 0.22 25);
+  
+  /* Stat card colors */
+  --stat-total: oklch(0.62 0.22 264);
+  --stat-running: oklch(0.72 0.20 160);
+  --stat-stopped: oklch(0.55 0.02 264);
+  --stat-failed: oklch(0.65 0.22 25);
 }
 
 @layer base {
