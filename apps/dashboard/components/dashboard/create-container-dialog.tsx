@@ -36,6 +36,7 @@ function OptionGroup<T extends number>({
   onChange,
   format,
   disabled,
+  unavailableOptions = [],
 }: {
   label: string;
   description?: string;
@@ -44,6 +45,7 @@ function OptionGroup<T extends number>({
   onChange: (v: T) => void;
   format: (v: T) => string;
   disabled?: boolean;
+  unavailableOptions?: readonly T[];
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -54,23 +56,46 @@ function OptionGroup<T extends number>({
         )}
       </div>
       <div className="flex gap-2 flex-wrap">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(opt)}
-            disabled={disabled}
-            className={cn(
-              "rounded-lg px-3.5 py-2 text-sm font-medium ring-1 ring-inset transition-all duration-200",
-              value === opt
-                ? "bg-primary text-primary-foreground ring-primary shadow-lg shadow-primary/20"
-                : "bg-card text-muted-foreground ring-foreground/10 hover:text-foreground hover:ring-foreground/20 hover:bg-accent",
-              disabled && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            {format(opt)}
-          </button>
-        ))}
+        {options.map((opt) => {
+          const isUnavailable = unavailableOptions.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => !isUnavailable && onChange(opt)}
+              disabled={disabled || isUnavailable}
+              className={cn(
+                "relative rounded-lg px-3.5 py-2 text-sm font-medium ring-1 ring-inset transition-all duration-200 overflow-hidden",
+                value === opt && !isUnavailable
+                  ? "bg-primary text-primary-foreground ring-primary shadow-lg shadow-primary/20"
+                  : "bg-card text-muted-foreground ring-foreground/10",
+                !isUnavailable && value !== opt && "hover:text-foreground hover:ring-foreground/20 hover:bg-accent",
+                (disabled || isUnavailable) && "cursor-not-allowed",
+                isUnavailable && "opacity-60"
+              )}
+              title={isUnavailable ? "This option is not available" : undefined}
+            >
+              {/* Red diagonal stripes for unavailable options */}
+              {isUnavailable && (
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: `repeating-linear-gradient(
+                      -45deg,
+                      transparent,
+                      transparent 4px,
+                      rgba(239, 68, 68, 0.3) 4px,
+                      rgba(239, 68, 68, 0.3) 8px
+                    )`,
+                  }}
+                />
+              )}
+              <span className={cn("relative", isUnavailable && "line-through decoration-red-500/70")}>
+                {format(opt)}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -80,7 +105,7 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
   const [hostname, setHostname] = useState("");
   const [cpuCores, setCpuCores] = useState<1 | 2 | 4 | 8>(1);
   const [memoryMb, setMemoryMb] = useState<512 | 1024 | 2048 | 4096>(512);
-  const [diskGb, setDiskGb] = useState<16 | 20 | 24 | 32>(16);
+  const [diskGb, setDiskGb] = useState<16 | 20 | 24 | 32>(32);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,7 +130,7 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
       setHostname("");
       setCpuCores(1);
       setMemoryMb(512);
-      setDiskGb(16);
+      setDiskGb(32);
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create container");
@@ -140,13 +165,19 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
             </Label>
             <Input
               id="hostname"
-              placeholder="my-container"
+              placeholder="mycontainer"
               value={hostname}
-              onChange={(e) => setHostname(e.target.value)}
+              onChange={(e) => {
+                // Only allow alphanumeric characters (letters and numbers)
+                const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                setHostname(sanitized);
+              }}
               disabled={creating}
               className="h-10"
               autoFocus
+              pattern="[a-zA-Z0-9]*"
             />
+            <p className="text-xs text-muted-foreground">Only letters and numbers allowed</p>
           </div>
           
           <div className="space-y-4 pt-2">
@@ -178,6 +209,7 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
               onChange={setDiskGb}
               format={(v) => `${v} GB`}
               disabled={creating}
+              unavailableOptions={[16, 20, 24] as const}
             />
           </div>
 
