@@ -1,6 +1,7 @@
 import { NavBar, MobileSidebar } from "@/components/nav-bar"
 import { TopHeader } from "@/components/layout/top-header"
 import { SidebarProvider } from "@/contexts/sidebar-context"
+import { SkipLink } from "@/components/ui/skip-link"
 
 /**
  * Props for the DashboardLayout component.
@@ -48,6 +49,9 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
+      {/* Skip link for keyboard navigation */}
+      <SkipLink href="#main-content" />
+      
       <div className="flex min-h-screen bg-background">
         {/* Desktop sidebar - fixed position, hidden on mobile */}
         <NavBar />
@@ -61,7 +65,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <TopHeader />
 
           {/* Page content with scrollable overflow */}
-          <main className="flex-1 overflow-auto" role="main">
+          <main id="main-content" className="flex-1 overflow-auto" role="main" tabIndex={-1}>
             {children}
           </main>
         </div>
