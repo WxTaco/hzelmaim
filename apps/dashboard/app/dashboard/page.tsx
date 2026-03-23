@@ -228,11 +228,8 @@ export default function DashboardPage() {
    */
   return (
     <div className="px-6 py-8 max-w-4xl mx-auto">
-      {/* Page header with title and create button */}
-      <DashboardHeader
-        containerCount={containers.length}
-        onCreateClick={() => setShowCreateDialog(true)}
-      />
+      {/* Page header with title */}
+      <DashboardHeader containerCount={containers.length} />
 
       {/* Password banner - shown after creating a new container */}
       <AnimatePresence>
