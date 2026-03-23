@@ -156,7 +156,10 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         
         {/* Profile action */}
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem 
+          className="cursor-pointer"
+          onClick={() => router.push("/dashboard/profile")}
+        >
           <User className="mr-2 h-4 w-4" aria-hidden="true" />
           <span>Profile</span>
         </DropdownMenuItem>
