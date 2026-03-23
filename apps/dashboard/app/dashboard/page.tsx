@@ -1,81 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
-import { Play, Square, RotateCcw, Loader2, ServerCrash, Plus, X, KeyRound, Copy, Check } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { AnimatePresence } from "framer-motion";
+import { ServerCrash, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 
-const EASE = [0.22, 1, 0.36, 1] as const;
-
-interface ContainerRecord {
-  id: string;
-  proxmox_ctid: number;
-  name: string;
-  node_name: string;
-  state: "provisioning" | "running" | "stopped" | "failed";
-  created_at: string;
-}
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { StatsCards } from "@/components/dashboard/stats-cards";
+import { ContainerList } from "@/components/dashboard/container-list";
+import { CreateContainerDialog, type CreateContainerData } from "@/components/dashboard/create-container-dialog";
+import { PasswordBanner } from "@/components/dashboard/password-banner";
+import type { ContainerRecord } from "@/components/dashboard/container-card";
 
 interface CreateContainerResult extends ContainerRecord {
   initial_password?: string;
-}
-
-function OptionGroup<T extends number>({
-  label,
-  options,
-  value,
-  onChange,
-  format,
-}: {
-  label: string;
-  options: T[];
-  value: T;
-  onChange: (v: T) => void;
-  format: (v: T) => string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <div className="flex gap-1.5 flex-wrap">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(opt)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors",
-              value === opt
-                ? "bg-foreground text-background ring-foreground"
-                : "bg-transparent text-muted-foreground ring-foreground/15 hover:text-foreground hover:ring-foreground/30"
-            )}
-          >
-            {format(opt)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StateBadge({ state }: { state: ContainerRecord["state"] }) {
-  const cfg = (
-    {
-      running: "bg-green-500/10 text-green-500 ring-green-500/20",
-      stopped: "bg-muted text-muted-foreground ring-foreground/10",
-      provisioning: "bg-blue-500/10 text-blue-400 ring-blue-500/20",
-      failed: "bg-destructive/10 text-destructive ring-destructive/20",
-    } as Record<string, string>
-  )[state] ?? "bg-muted text-muted-foreground ring-foreground/10";
-  return (
-    <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset shrink-0", cfg)}>
-      {state}
-    </span>
-  );
 }
 
 export default function DashboardPage() {
@@ -84,16 +23,17 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState<Set<string>>(new Set());
 
-  // Create form state
-  const [showCreate, setShowCreate] = useState(false);
-  const [hostname, setHostname] = useState("");
-  const [cpuCores, setCpuCores] = useState<1 | 2 | 4 | 8>(1);
-  const [memoryMb, setMemoryMb] = useState<512 | 1024 | 2048 | 4096>(512);
-  const [diskGb, setDiskGb] = useState<16 | 20 | 24 | 32>(16);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  // Dialog state
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+
+  // Compute stats from containers
+  const stats = useMemo(() => ({
+    total: containers.length,
+    running: containers.filter(c => c.state === "running").length,
+    stopped: containers.filter(c => c.state === "stopped").length,
+    failed: containers.filter(c => c.state === "failed").length,
+  }), [containers]);
 
   const load = useCallback(async () => {
     try {
@@ -119,226 +59,100 @@ export default function DashboardPage() {
     }
   };
 
-  const submitCreate = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!hostname.trim()) { setCreateError("Hostname is required"); return; }
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const res = await apiFetch<{ data: CreateContainerResult }>("/api/v1/containers", {
-        method: "POST",
-        body: JSON.stringify({ hostname: hostname.trim(), cpu_cores: cpuCores, memory_mb: memoryMb, disk_gb: diskGb }),
-      });
-      setCreatedPassword(res.data.initial_password ?? null);
-      setShowCreate(false);
-      setHostname("");
-      setCpuCores(1);
-      setMemoryMb(512);
-      setDiskGb(16);
-      await load();
-    } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Failed to create container");
-    } finally {
-      setCreating(false);
-    }
+  const handleCreate = async (data: CreateContainerData) => {
+    const res = await apiFetch<{ data: CreateContainerResult }>("/api/v1/containers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    setCreatedPassword(res.data.initial_password ?? null);
+    await load();
   };
 
-  const copyPassword = () => {
-    if (!createdPassword) return;
-    navigator.clipboard.writeText(createdPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  // Loading state
   if (loading) {
     return (
-      <div className="px-6 py-6 max-w-2xl">
-        <div className="mb-5 h-5 w-24 rounded-md bg-muted animate-pulse" />
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="mb-2 h-12 rounded-xl bg-muted animate-pulse" />
-        ))}
+      <div className="px-6 py-8 max-w-4xl mx-auto">
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <div className="h-8 w-32 rounded-lg bg-muted animate-pulse" />
+            <div className="h-4 w-48 rounded-md bg-muted animate-pulse mt-2" />
+          </div>
+          <div className="h-10 w-36 rounded-lg bg-muted animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 py-24 gap-3 text-center max-w-2xl">
-        <ServerCrash className="size-7 text-muted-foreground" />
-        <p className="text-sm font-medium">Failed to load containers</p>
-        <p className="text-xs text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => { setLoading(true); setError(null); load(); }}>
-          Retry
+      <div className="flex flex-col items-center justify-center px-6 py-24 gap-4 text-center max-w-4xl mx-auto">
+        <div className="flex items-center justify-center size-16 rounded-2xl bg-destructive/10">
+          <ServerCrash className="size-8 text-destructive" />
+        </div>
+        <div>
+          <p className="text-lg font-semibold">Failed to load containers</p>
+          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => { setLoading(true); setError(null); load(); }}
+          className="mt-2"
+        >
+          <Loader2 className="size-4 mr-2" />
+          Try Again
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="px-6 py-6 max-w-2xl">
-      <motion.header
-        className="mb-4"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: EASE }}
-      >
-        <h1 className="text-base font-semibold tracking-tight">Containers</h1>
-        <div className="mt-0.5 flex items-center gap-2.5">
-          <p className="text-sm text-muted-foreground">
-            {containers.length === 0
-              ? "No containers yet"
-              : `${containers.length} container${containers.length !== 1 ? "s" : ""}`}
-          </p>
-          <button
-            onClick={() => { setShowCreate((v) => !v); setCreateError(null); }}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showCreate
-              ? <><X className="size-3" />Cancel</>
-              : <><Plus className="size-3" />New</>}
-          </button>
-        </div>
-      </motion.header>
+    <div className="px-6 py-8 max-w-4xl mx-auto">
+      <DashboardHeader
+        containerCount={containers.length}
+        onCreateClick={() => setShowCreateDialog(true)}
+      />
 
-      {/* One-time password banner */}
       <AnimatePresence>
         {createdPassword && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="mb-3 overflow-hidden"
-          >
-            <div className="flex items-start gap-3 rounded-xl bg-amber-500/8 ring-1 ring-amber-500/20 px-4 py-3">
-              <KeyRound className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Save your root password — it won&apos;t be shown again</p>
-                <p className="mt-1 font-mono text-xs break-all">{createdPassword}</p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon-sm" onClick={copyPassword} title="Copy">
-                  {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-                </Button>
-                <Button variant="ghost" size="icon-sm" onClick={() => setCreatedPassword(null)} title="Dismiss">
-                  <X className="size-3.5" />
-                </Button>
-              </div>
-            </div>
-          </motion.div>
+          <PasswordBanner
+            password={createdPassword}
+            onDismiss={() => setCreatedPassword(null)}
+          />
         )}
       </AnimatePresence>
 
-      {/* Create form */}
-      <AnimatePresence>
-        {showCreate && (
-          <motion.form
-            onSubmit={submitCreate}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="mb-3 overflow-hidden"
-          >
-            <div className="rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-4 flex flex-col gap-3.5">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="hostname">Hostname</Label>
-                <Input
-                  id="hostname"
-                  placeholder="my-container"
-                  value={hostname}
-                  onChange={(e) => setHostname(e.target.value)}
-                  disabled={creating}
-                  autoFocus
-                />
-              </div>
-              <OptionGroup
-                label="CPU"
-                options={[1, 2, 4, 8] as const}
-                value={cpuCores}
-                onChange={setCpuCores}
-                format={(v) => `${v} core${v !== 1 ? "s" : ""}`}
-              />
-              <OptionGroup
-                label="Memory"
-                options={[512, 1024, 2048, 4096] as const}
-                value={memoryMb}
-                onChange={setMemoryMb}
-                format={(v) => v >= 1024 ? `${v / 1024} GB` : `${v} MB`}
-              />
-              <OptionGroup
-                label="Disk"
-                options={[16, 20, 24, 32] as const}
-                value={diskGb}
-                onChange={setDiskGb}
-                format={(v) => `${v} GB`}
-              />
-              {createError && <p className="text-xs text-destructive">{createError}</p>}
-              <div className="flex justify-end">
-                <Button type="submit" size="sm" disabled={creating}>
-                  {creating && <Loader2 className="size-3.5 animate-spin" />}
-                  {creating ? "Creating…" : "Create container"}
-                </Button>
-              </div>
-            </div>
-          </motion.form>
-        )}
-      </AnimatePresence>
-
-      {containers.length === 0 && !showCreate ? (
-        <motion.p
-          className="text-sm text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.35, ease: EASE }}
-        >
-          No containers yet.
-        </motion.p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {containers.map((c, i) => {
-            const busy = acting.has(c.id);
-            return (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + i * 0.055, duration: 0.4, ease: EASE }}
-                className="flex items-center gap-3 rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-2.5"
-              >
-                <Link href={`/dashboard/containers/${c.id}`} className="min-w-0 flex-1 group/link">
-                  <p className="text-sm font-medium truncate group-hover/link:underline underline-offset-2">{c.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{c.node_name} · CT{c.proxmox_ctid}</p>
-                </Link>
-
-                <StateBadge state={c.state} />
-
-                <div className="flex items-center gap-0.5">
-                  {c.state === "provisioning" && (
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  )}
-                  {c.state === "stopped" && (
-                    <Button variant="ghost" size="icon-sm" disabled={busy} onClick={() => doAction(c.id, "start")} title="Start">
-                      {busy ? <Loader2 className="animate-spin" /> : <Play className="text-green-500" />}
-                    </Button>
-                  )}
-                  {c.state === "running" && (
-                    <>
-                      <Button variant="ghost" size="icon-sm" disabled={busy} onClick={() => doAction(c.id, "restart")} title="Restart">
-                        {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" disabled={busy} onClick={() => doAction(c.id, "stop")} title="Stop">
-                        {busy ? <Loader2 className="animate-spin" /> : <Square />}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+      {containers.length > 0 && (
+        <StatsCards
+          total={stats.total}
+          running={stats.running}
+          stopped={stats.stopped}
+          failed={stats.failed}
+        />
       )}
+
+      <ContainerList
+        containers={containers}
+        actingIds={acting}
+        onAction={doAction}
+        onCreateClick={() => setShowCreateDialog(true)}
+      />
+
+      <CreateContainerDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSubmit={handleCreate}
+      />
     </div>
   );
 }
-
