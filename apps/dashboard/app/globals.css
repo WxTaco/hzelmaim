@@ -50,69 +50,69 @@
 }
 
 :root {
-  /* Deep charcoal background for trust and professionalism */
-  --background: oklch(0.12 0.005 240);
-  --foreground: oklch(0.95 0.005 240);
+  /* Pure black background for premium corporate feel */
+  --background: #050506;
+  --foreground: #fafafa;
   
-  /* Slightly elevated card surfaces */
-  --card: oklch(0.16 0.008 240);
-  --card-foreground: oklch(0.95 0.005 240);
-  --popover: oklch(0.16 0.008 240);
-  --popover-foreground: oklch(0.95 0.005 240);
+  /* Elevated card surfaces */
+  --card: #0a0a0b;
+  --card-foreground: #fafafa;
+  --popover: #0a0a0b;
+  --popover-foreground: #fafafa;
   
-  /* Teal primary for trust and clarity */
-  --primary: oklch(0.70 0.14 180);
-  --primary-foreground: oklch(0.12 0.005 240);
+  /* Brand blue primary - #00a4ff */
+  --primary: #00a4ff;
+  --primary-foreground: #050506;
   
-  /* Subtle secondary tones */
-  --secondary: oklch(0.20 0.008 240);
-  --secondary-foreground: oklch(0.95 0.005 240);
-  --muted: oklch(0.20 0.008 240);
-  --muted-foreground: oklch(0.60 0.01 240);
+  /* Neutral zinc tones */
+  --secondary: #111113;
+  --secondary-foreground: #fafafa;
+  --muted: #111113;
+  --muted-foreground: #a1a1aa;
   
   /* Accent for highlights */
-  --accent: oklch(0.24 0.012 240);
-  --accent-foreground: oklch(0.95 0.005 240);
+  --accent: #18181b;
+  --accent-foreground: #fafafa;
   
   /* Semantic colors */
-  --destructive: oklch(0.60 0.20 25);
+  --destructive: #dc2626;
   
-  /* Borders and inputs */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.70 0.14 180 / 50%);
+  /* Refined borders */
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #00a4ff;
   
-  /* Chart colors */
-  --chart-1: oklch(0.70 0.14 180);
-  --chart-2: oklch(0.65 0.15 200);
-  --chart-3: oklch(0.72 0.16 160);
-  --chart-4: oklch(0.60 0.12 220);
-  --chart-5: oklch(0.68 0.10 140);
+  /* Chart colors - brand blue spectrum */
+  --chart-1: #00a4ff;
+  --chart-2: #0284c7;
+  --chart-3: #0ea5e9;
+  --chart-4: #38bdf8;
+  --chart-5: #7dd3fc;
   
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   
   /* Sidebar theming */
-  --sidebar: oklch(0.14 0.006 240);
-  --sidebar-foreground: oklch(0.95 0.005 240);
-  --sidebar-primary: oklch(0.70 0.14 180);
-  --sidebar-primary-foreground: oklch(0.12 0.005 240);
-  --sidebar-accent: oklch(0.20 0.008 240);
-  --sidebar-accent-foreground: oklch(0.95 0.005 240);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.70 0.14 180 / 50%);
+  --sidebar: #080809;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #00a4ff;
+  --sidebar-primary-foreground: #050506;
+  --sidebar-accent: #111113;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #00a4ff;
   
   /* Status colors */
-  --status-running: oklch(0.72 0.18 160);
-  --status-running-glow: oklch(0.72 0.18 160 / 20%);
-  --status-stopped: oklch(0.55 0.02 240);
-  --status-provisioning: oklch(0.68 0.15 200);
-  --status-failed: oklch(0.60 0.20 25);
+  --status-running: #22c55e;
+  --status-running-glow: rgba(34, 197, 94, 0.15);
+  --status-stopped: #71717a;
+  --status-provisioning: #00a4ff;
+  --status-failed: #dc2626;
   
   /* Stat card colors */
-  --stat-total: oklch(0.70 0.14 180);
-  --stat-running: oklch(0.72 0.18 160);
-  --stat-stopped: oklch(0.55 0.02 240);
-  --stat-failed: oklch(0.60 0.20 25);
+  --stat-total: #00a4ff;
+  --stat-running: #22c55e;
+  --stat-stopped: #71717a;
+  --stat-failed: #dc2626;
 }
 
 @layer base {
@@ -124,5 +124,41 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .glow-primary {
+    box-shadow: 0 0 60px rgba(0, 164, 255, 0.12), 0 0 100px rgba(0, 164, 255, 0.06);
+  }
+  
+  .glow-primary-sm {
+    box-shadow: 0 0 30px rgba(0, 164, 255, 0.1);
+  }
+  
+  .border-glow {
+    box-shadow: inset 0 0 0 1px rgba(0, 164, 255, 0.1), 0 0 20px rgba(0, 164, 255, 0.05);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, #00a4ff 0%, #38bdf8 50%, #00a4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .card-elevated {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-hover:hover {
+    border-color: rgba(0, 164, 255, 0.3);
+    box-shadow: 0 0 30px rgba(0, 164, 255, 0.08);
+    transform: translateY(-2px);
   }
 }
