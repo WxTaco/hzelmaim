@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { BookOpen, HelpCircle, ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { PublicLayout } from "@/components/public-layout";
 
@@ -102,6 +102,142 @@ const glossaryTerms = [
       "Basic DDoS protection blocks common attack patterns; advanced protection handles sophisticated multi-vector attacks.",
     category: "Security",
   },
+  {
+    term: "Firewall",
+    definition:
+      "A security system that monitors and controls incoming and outgoing network traffic based on rules you define. It acts as a barrier between your server and potential threats from the internet.",
+    example:
+      "You might allow traffic only on ports 80 (HTTP) and 443 (HTTPS) while blocking all other incoming connections.",
+    category: "Security",
+  },
+  {
+    term: "SSH (Secure Shell)",
+    definition:
+      "A secure protocol for remotely accessing and managing your server via command line. SSH encrypts all communication, making it safe to send commands and transfer files over the internet.",
+    example:
+      "You use SSH to connect to your server from your laptop to install software or view logs.",
+    category: "Security",
+  },
+  {
+    term: "SSL/TLS Certificate",
+    definition:
+      "A digital certificate that encrypts data between your server and visitors' browsers, shown as the padlock icon and 'https' in browser address bars. Essential for security and user trust.",
+    example:
+      "Let's Encrypt provides free SSL certificates that auto-renew every 90 days.",
+    category: "Security",
+  },
+  {
+    term: "IPv4 / IPv6",
+    definition:
+      "Internet Protocol addresses that identify your server on the internet. IPv4 addresses (like 192.168.1.1) are running out, while IPv6 provides virtually unlimited addresses with a longer format.",
+    example:
+      "Your VPS might have one IPv4 address and multiple IPv6 addresses included.",
+    category: "Network",
+  },
+  {
+    term: "DNS (Domain Name System)",
+    definition:
+      "The internet's phone book that translates human-readable domain names (like example.com) into IP addresses that computers use. DNS records tell browsers where to find your server.",
+    example:
+      "An 'A record' points your domain to your server's IPv4 address; a 'CNAME' creates an alias.",
+    category: "Network",
+  },
+  {
+    term: "Load Balancer",
+    definition:
+      "A system that distributes incoming traffic across multiple servers to prevent any single server from being overwhelmed. Improves reliability and allows your application to scale.",
+    example:
+      "If one server fails, the load balancer automatically routes traffic to healthy servers.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Reverse Proxy",
+    definition:
+      "A server that sits between users and your application servers, forwarding requests and responses. Can provide caching, SSL termination, and additional security layers.",
+    example:
+      "Nginx or Caddy can act as a reverse proxy, handling HTTPS while your app runs on HTTP internally.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Backup & Snapshot",
+    definition:
+      "A backup is a copy of your data stored separately for recovery. A snapshot is a point-in-time image of your entire server state that can be restored instantly.",
+    example:
+      "Daily backups protect your data; snapshots let you restore your entire server to yesterday's state in minutes.",
+    category: "Reliability",
+  },
+  {
+    term: "Data Center / Region",
+    definition:
+      "The physical facility where servers are housed, with redundant power, cooling, and network connections. Choosing a region close to your users reduces latency.",
+    example:
+      "Hosting in Frankfurt serves European users faster than a server in New York.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Egress / Ingress",
+    definition:
+      "Egress is data leaving your server (downloads, responses to users). Ingress is data coming in (uploads, requests). Many providers charge extra for egress beyond a certain limit.",
+    example:
+      "Streaming video to users consumes high egress bandwidth; uploading files uses ingress.",
+    category: "Network",
+  },
+  {
+    term: "Hypervisor",
+    definition:
+      "Software that creates and manages virtual machines on physical hardware. It allocates resources and ensures each VPS is isolated from others on the same host.",
+    example:
+      "KVM and VMware are common hypervisors; KVM is open-source and widely used for VPS hosting.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Root Access",
+    definition:
+      "Full administrative control over your server, allowing you to install any software, modify system settings, and access all files. With great power comes great responsibility.",
+    example:
+      "Root access lets you install custom software, but also means you're responsible for security updates.",
+    category: "Security",
+  },
+  {
+    term: "Managed vs Unmanaged",
+    definition:
+      "Managed hosting means the provider handles server maintenance, updates, and security. Unmanaged means you're responsible for everything—usually cheaper but requires technical knowledge.",
+    example:
+      "Choose managed if you want to focus on your app; unmanaged if you want full control and lower costs.",
+    category: "Infrastructure",
+  },
+  {
+    term: "CDN (Content Delivery Network)",
+    definition:
+      "A global network of servers that cache and deliver your content from locations close to users. Reduces load on your main server and speeds up delivery of static assets.",
+    example:
+      "Images hosted on a CDN load from a server in Tokyo for Japanese users, New York for US users.",
+    category: "Network",
+  },
+  {
+    term: "Rate Limiting",
+    definition:
+      "Controlling how many requests a user or IP can make in a given time period. Protects your server from abuse, brute force attacks, and ensures fair resource usage.",
+    example:
+      "Limiting login attempts to 5 per minute prevents password guessing attacks.",
+    category: "Security",
+  },
+  {
+    term: "Cron Job",
+    definition:
+      "A scheduled task that runs automatically at specified times or intervals. Used for maintenance tasks, backups, sending emails, or any recurring automated work.",
+    example:
+      "A cron job might clear temporary files every night at 3 AM or send weekly report emails.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Port",
+    definition:
+      "A numbered endpoint for network communication. Different services use different ports—web servers typically use 80 (HTTP) and 443 (HTTPS), while databases use ports like 5432 (PostgreSQL).",
+    example:
+      "If your app runs on port 3000, you might use a reverse proxy to forward traffic from port 443.",
+    category: "Network",
+  },
 ];
 
 const categories = [
@@ -129,40 +265,46 @@ export default function GlossaryPage() {
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="border-b border-border/50 py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+      <section className="relative py-20 sm:py-28 lg:py-32">
+        {/* Background gradient */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 164, 255, 0.06) 0%, transparent 60%)",
+          }}
+        />
+        
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="mb-4 inline-flex items-center justify-center rounded-full bg-primary/10 p-3">
-              <BookOpen className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">Reference</p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
               Hosting Glossary
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground sm:mt-6 sm:text-lg">
-              New to hosting? Click on any term below to learn what it means in
-              plain language.
+            <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+              {glossaryTerms.length} terms explained in plain language. Click any term to expand its definition and see practical examples.
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Search and Filter */}
-      <section className="border-b border-border/50 py-6 sm:py-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <section className="border-y border-border bg-card/50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Search */}
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search terms..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-md border border-border bg-background py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -172,10 +314,10 @@ export default function GlossaryPage() {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm ${
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
                     selectedCategory === category
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "border border-border bg-background text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
                   }`}
                 >
                   {category}
@@ -187,10 +329,10 @@ export default function GlossaryPage() {
       </section>
 
       {/* Glossary Terms */}
-      <section className="py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {filteredTerms.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
               {filteredTerms.map((item, index) => (
                 <GlossaryTerm
                   key={item.term}
@@ -198,41 +340,53 @@ export default function GlossaryPage() {
                   definition={item.definition}
                   example={item.example}
                   category={item.category}
-                  delay={index * 0.03}
+                  delay={Math.min(index * 0.02, 0.3)}
                 />
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center">
+            <div className="py-16 text-center">
               <p className="text-muted-foreground">
                 No terms found matching your search.
               </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("All");
+                }}
+                className="mt-4 text-sm font-medium text-primary hover:underline"
+              >
+                Clear filters
+              </button>
             </div>
           )}
         </div>
       </section>
 
       {/* CTA */}
-      <section className="border-t border-border/50 py-12 sm:py-16">
-        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
+            className="flex flex-col items-center justify-between gap-8 rounded-lg border border-border bg-card p-8 sm:flex-row sm:p-10 lg:p-12"
           >
-            <h3 className="text-xl font-semibold sm:text-2xl">
-              Common misconceptions?
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              Learn about the myths that hosting providers exploit.
-            </p>
+            <div>
+              <h3 className="text-xl font-semibold sm:text-2xl">
+                Common misconceptions?
+              </h3>
+              <p className="mt-2 text-muted-foreground">
+                Learn about the myths that hosting providers exploit.
+              </p>
+            </div>
             <Link
               href="/myths"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] sm:px-6 sm:py-3"
+              className="group inline-flex items-center gap-2.5 rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
             >
               Explore Myths
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </motion.div>
         </div>
@@ -258,29 +412,34 @@ function GlossaryTerm({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay }}
+      transition={{ duration: 0.4, delay }}
     >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:bg-card/80 sm:p-5"
+        className="w-full text-left rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30 sm:p-5"
       >
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            {category}
-          </span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded bg-accent px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {category}
+              </span>
+            </div>
+            <h3 className="text-sm font-semibold text-foreground truncate pr-2">
+              {term}
+            </h3>
+          </div>
           <motion.div
-            animate={{ rotate: isExpanded ? 45 : 0 }}
+            animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
+            className="shrink-0 mt-1"
           >
-            <HelpCircle className="h-4 w-4 text-primary" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </motion.div>
         </div>
-        <h3 className="text-sm font-semibold text-foreground sm:text-base">
-          {term}
-        </h3>
         <motion.div
           initial={false}
           animate={{
@@ -291,12 +450,12 @@ function GlossaryTerm({
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden"
         >
-          <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {definition}
           </p>
-          <div className="mt-3 rounded-lg bg-muted/50 p-2.5 sm:p-3">
+          <div className="mt-4 rounded-md bg-accent/50 p-3">
             <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Example:</span>{" "}
+              <span className="font-semibold text-foreground">Example:</span>{" "}
               {example}
             </p>
           </div>

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { HelpCircle, X, Check, ArrowRight } from "lucide-react";
+import { X, Check, ArrowRight } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 
 const myths = [
@@ -67,38 +67,45 @@ export default function MythsPage() {
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="border-b border-border/50 py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+      <section className="relative py-20 sm:py-28 lg:py-32">
+        {/* Background gradient */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 164, 255, 0.06) 0%, transparent 60%)",
+          }}
+        />
+        
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="mb-4 inline-flex items-center justify-center rounded-full bg-primary/10 p-3">
-              <HelpCircle className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">Debunked</p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
               Myth vs Reality
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground sm:mt-6 sm:text-lg">
-              Let&apos;s clear up some common misconceptions about web hosting
-              that providers often exploit.
+            <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+              Common misconceptions about web hosting that providers often exploit—and the truth behind them.
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Myths List */}
-      <section className="py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="space-y-4 sm:space-y-6">
+      <section className="border-t border-border py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="space-y-4">
             {myths.map((item, index) => (
               <MythCard
                 key={index}
                 myth={item.myth}
                 reality={item.reality}
                 takeaway={item.takeaway}
-                delay={index * 0.05}
+                delay={Math.min(index * 0.05, 0.3)}
+                index={index + 1}
               />
             ))}
           </div>
@@ -106,48 +113,37 @@ export default function MythsPage() {
       </section>
 
       {/* Summary Section */}
-      <section className="border-t border-border/50 py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+      <section className="border-t border-border py-20 sm:py-28">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="rounded-xl border border-border bg-card p-6 sm:p-8"
+            className="rounded-lg border border-border bg-card p-8 sm:p-10 lg:p-12"
           >
-            <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">Summary</p>
+            <h2 className="mt-3 text-xl font-semibold sm:text-2xl">
               The Bottom Line
             </h2>
-            <div className="space-y-4 text-sm text-muted-foreground sm:text-base">
+            <div className="mt-6 space-y-4 text-sm text-muted-foreground sm:text-base leading-relaxed">
               <p>
                 The hosting industry relies on information asymmetry—providers
                 know more than customers, and some exploit this gap. By
                 understanding these common misconceptions, you can:
               </p>
-              <ul className="space-y-2 pl-4">
-                <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>Make purchasing decisions based on facts, not fear</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>
-                    Recognize marketing tactics that don&apos;t serve your
-                    interests
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>
-                    Choose providers based on transparency and actual value
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>
-                    Protect yourself with proper backups and data ownership
-                  </span>
-                </li>
+              <ul className="mt-6 space-y-3">
+                {[
+                  "Make purchasing decisions based on facts, not fear",
+                  "Recognize marketing tactics that don't serve your interests",
+                  "Choose providers based on transparency and actual value",
+                  "Protect yourself with proper backups and data ownership",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </motion.div>
@@ -155,26 +151,29 @@ export default function MythsPage() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-border/50 py-12 sm:py-16">
-        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
+            className="flex flex-col items-center justify-between gap-8 rounded-lg border border-border bg-card p-8 sm:flex-row sm:p-10 lg:p-12"
           >
-            <h3 className="text-xl font-semibold sm:text-2xl">
-              See how we do things differently
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              Explore our commitment to transparent, user-first hosting.
-            </p>
+            <div>
+              <h3 className="text-xl font-semibold sm:text-2xl">
+                See how we do things differently
+              </h3>
+              <p className="mt-2 text-muted-foreground">
+                Explore our commitment to transparent, user-first hosting.
+              </p>
+            </div>
             <Link
               href="/features"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] sm:px-6 sm:py-3"
+              className="group inline-flex items-center gap-2.5 rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
             >
               View Features
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </motion.div>
         </div>
@@ -188,11 +187,13 @@ function MythCard({
   reality,
   takeaway,
   delay,
+  index,
 }: {
   myth: string;
   reality: string;
   takeaway: string;
   delay: number;
+  index: number;
 }) {
   return (
     <motion.div
@@ -200,37 +201,39 @@ function MythCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden rounded-lg border border-border bg-card"
     >
       {/* Myth */}
-      <div className="flex items-start gap-3 border-b border-border bg-destructive/5 p-4 sm:gap-4 sm:p-5">
-        <div className="shrink-0 rounded-full bg-destructive/10 p-1.5 sm:p-2">
-          <X className="h-3.5 w-3.5 text-destructive sm:h-4 sm:w-4" />
+      <div className="flex items-start gap-4 border-b border-border p-5 sm:p-6">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-destructive/10">
+          <X className="h-4 w-4 text-destructive" />
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-destructive">
-            Myth
-          </p>
-          <p className="mt-1 text-sm font-medium text-foreground sm:text-base">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-destructive">
+              Myth #{index}
+            </span>
+          </div>
+          <p className="mt-1.5 font-medium text-foreground">
             {myth}
           </p>
         </div>
       </div>
       {/* Reality */}
-      <div className="flex items-start gap-3 p-4 sm:gap-4 sm:p-5">
-        <div className="shrink-0 rounded-full bg-primary/10 p-1.5 sm:p-2">
-          <Check className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
+      <div className="flex items-start gap-4 p-5 sm:p-6">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+          <Check className="h-4 w-4 text-primary" />
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-primary">
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-primary">
             Reality
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          </span>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             {reality}
           </p>
-          <div className="mt-3 rounded-lg bg-muted/50 p-2.5 sm:mt-4 sm:p-3">
+          <div className="mt-4 rounded-md bg-accent p-3">
             <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Takeaway:</span>{" "}
+              <span className="font-semibold text-foreground">Takeaway:</span>{" "}
               {takeaway}
             </p>
           </div>

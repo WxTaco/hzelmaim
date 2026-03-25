@@ -10,7 +10,7 @@ import {
   Zap,
   DollarSign,
   ArrowRight,
-  CheckCircle2,
+  Check,
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 
@@ -115,17 +115,27 @@ export default function FeaturesPage() {
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="border-b border-border/50 py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+      <section className="relative py-20 sm:py-28 lg:py-32">
+        {/* Background gradient */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 164, 255, 0.06) 0%, transparent 60%)",
+          }}
+        />
+        
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              Our Commitment to You
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">Our Promise</p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              Built on Transparency
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground sm:mt-6 sm:text-lg">
+            <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
               We built hzel to solve the industry problems we&apos;ve discussed.
               Here&apos;s how we do things differently.
             </p>
@@ -134,9 +144,9 @@ export default function FeaturesPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+      <section className="border-t border-border py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
             {features.map((feature, index) => (
               <FeatureCard
                 key={feature.title}
@@ -144,7 +154,7 @@ export default function FeaturesPage() {
                 title={feature.title}
                 description={feature.description}
                 highlights={feature.highlights}
-                delay={index * 0.05}
+                delay={Math.min(index * 0.05, 0.25)}
               />
             ))}
           </div>
@@ -152,21 +162,21 @@ export default function FeaturesPage() {
       </section>
 
       {/* Comparison Section */}
-      <section className="border-t border-border/50 py-12 sm:py-16 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+      <section className="border-t border-border py-20 sm:py-28">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="mb-10 text-center sm:mb-12"
+            className="text-center"
           >
-            <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">Comparison</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
               The hzel Difference
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm text-muted-foreground sm:text-base">
-              A clear comparison of what sets us apart from typical hosting
-              providers.
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              A clear comparison of what sets us apart from typical hosting providers.
             </p>
           </motion.div>
 
@@ -175,17 +185,17 @@ export default function FeaturesPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="overflow-hidden rounded-xl border border-border bg-card"
+            className="mt-12 overflow-hidden rounded-lg border border-border bg-card"
           >
-            {/* Header - Hidden on mobile, shown on sm+ */}
-            <div className="hidden border-b border-border bg-muted/50 p-4 sm:grid sm:grid-cols-3">
-              <div className="text-sm font-medium text-muted-foreground">
+            {/* Header */}
+            <div className="hidden border-b border-border bg-accent/50 px-6 py-4 sm:grid sm:grid-cols-3">
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Practice
               </div>
-              <div className="text-center text-sm font-medium text-muted-foreground">
+              <div className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Typical Providers
               </div>
-              <div className="text-center text-sm font-medium text-primary">
+              <div className="text-center text-xs font-medium uppercase tracking-wider text-primary">
                 hzel
               </div>
             </div>
@@ -205,31 +215,44 @@ export default function FeaturesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="border-t border-border/50 py-12 sm:py-16 md:py-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto max-w-2xl px-4 text-center sm:px-6"
-        >
-          <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-            Ready to experience hosting differently?
-          </h2>
-          <p className="mt-4 text-pretty text-sm text-muted-foreground sm:text-base">
-            Join a platform built on transparency and user empowerment. No
-            surprises, no hidden agendas.
-          </p>
-          <div className="mt-8">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] sm:px-8 sm:py-4 sm:text-base"
-            >
-              Sign in to Get Started
-              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Link>
-          </div>
-        </motion.div>
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="relative overflow-hidden rounded-lg border border-border bg-card p-8 sm:p-12 lg:p-16"
+          >
+            {/* Subtle glow */}
+            <div 
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: "radial-gradient(ellipse at top right, rgba(0, 164, 255, 0.05) 0%, transparent 50%)"
+              }}
+            />
+            
+            <div className="relative flex flex-col items-center text-center lg:flex-row lg:justify-between lg:text-left">
+              <div className="lg:max-w-xl">
+                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                  Ready to experience hosting differently?
+                </h2>
+                <p className="mt-3 text-muted-foreground">
+                  Join a platform built on transparency and user empowerment. No surprises, no hidden agendas.
+                </p>
+              </div>
+              <div className="mt-8 lg:mt-0 lg:ml-8">
+                <Link
+                  href="/login"
+                  className="group inline-flex items-center gap-2.5 rounded-md bg-primary px-8 py-4 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
+                >
+                  Sign in to Get Started
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
     </PublicLayout>
   );
@@ -254,22 +277,22 @@ function FeatureCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay }}
-      className="flex flex-col rounded-xl border border-border bg-card p-5 sm:p-6"
+      className="flex flex-col rounded-lg border border-border bg-card p-6 card-hover"
     >
-      <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary sm:mb-4 sm:h-10 sm:w-10">
+      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-accent text-primary">
         {icon}
       </div>
-      <h3 className="mb-2 text-sm font-semibold sm:text-base">{title}</h3>
-      <p className="mb-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+      <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground flex-1">
         {description}
       </p>
-      <ul className="mt-auto space-y-2">
+      <ul className="mt-6 space-y-2 border-t border-border pt-6">
         {highlights.map((highlight, index) => (
           <li
             key={index}
-            className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm"
+            className="flex items-center gap-2.5 text-sm text-muted-foreground"
           >
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
+            <Check className="h-4 w-4 shrink-0 text-primary" />
             {highlight}
           </li>
         ))}
@@ -291,19 +314,15 @@ function ComparisonRow({
 }) {
   return (
     <div
-      className={`flex flex-col gap-2 p-4 sm:grid sm:grid-cols-3 sm:gap-0 ${!isLast ? "border-b border-border" : ""}`}
+      className={`flex flex-col gap-3 px-6 py-5 sm:grid sm:grid-cols-3 sm:items-center sm:gap-0 ${!isLast ? "border-b border-border" : ""}`}
     >
       <div className="text-sm font-medium">{practice}</div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground sm:justify-center sm:gap-0">
-        <span className="text-xs text-muted-foreground/60 sm:hidden">
-          Typical:
-        </span>
+        <span className="text-xs text-muted-foreground/50 sm:hidden">Typical:</span>
         {typical}
       </div>
       <div className="flex items-center gap-2 text-sm font-medium text-primary sm:justify-center sm:gap-0">
-        <span className="text-xs text-muted-foreground/60 sm:hidden">
-          hzel:
-        </span>
+        <span className="text-xs text-muted-foreground/50 sm:hidden">hzel:</span>
         {ours}
       </div>
     </div>
