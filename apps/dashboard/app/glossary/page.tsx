@@ -102,6 +102,142 @@ const glossaryTerms = [
       "Basic DDoS protection blocks common attack patterns; advanced protection handles sophisticated multi-vector attacks.",
     category: "Security",
   },
+  {
+    term: "Firewall",
+    definition:
+      "A security system that monitors and controls incoming and outgoing network traffic based on rules you define. It acts as a barrier between your server and potential threats from the internet.",
+    example:
+      "You might allow traffic only on ports 80 (HTTP) and 443 (HTTPS) while blocking all other incoming connections.",
+    category: "Security",
+  },
+  {
+    term: "SSH (Secure Shell)",
+    definition:
+      "A secure protocol for remotely accessing and managing your server via command line. SSH encrypts all communication, making it safe to send commands and transfer files over the internet.",
+    example:
+      "You use SSH to connect to your server from your laptop to install software or view logs.",
+    category: "Security",
+  },
+  {
+    term: "SSL/TLS Certificate",
+    definition:
+      "A digital certificate that encrypts data between your server and visitors' browsers, shown as the padlock icon and 'https' in browser address bars. Essential for security and user trust.",
+    example:
+      "Let's Encrypt provides free SSL certificates that auto-renew every 90 days.",
+    category: "Security",
+  },
+  {
+    term: "IPv4 / IPv6",
+    definition:
+      "Internet Protocol addresses that identify your server on the internet. IPv4 addresses (like 192.168.1.1) are running out, while IPv6 provides virtually unlimited addresses with a longer format.",
+    example:
+      "Your VPS might have one IPv4 address and multiple IPv6 addresses included.",
+    category: "Network",
+  },
+  {
+    term: "DNS (Domain Name System)",
+    definition:
+      "The internet's phone book that translates human-readable domain names (like example.com) into IP addresses that computers use. DNS records tell browsers where to find your server.",
+    example:
+      "An 'A record' points your domain to your server's IPv4 address; a 'CNAME' creates an alias.",
+    category: "Network",
+  },
+  {
+    term: "Load Balancer",
+    definition:
+      "A system that distributes incoming traffic across multiple servers to prevent any single server from being overwhelmed. Improves reliability and allows your application to scale.",
+    example:
+      "If one server fails, the load balancer automatically routes traffic to healthy servers.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Reverse Proxy",
+    definition:
+      "A server that sits between users and your application servers, forwarding requests and responses. Can provide caching, SSL termination, and additional security layers.",
+    example:
+      "Nginx or Caddy can act as a reverse proxy, handling HTTPS while your app runs on HTTP internally.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Backup & Snapshot",
+    definition:
+      "A backup is a copy of your data stored separately for recovery. A snapshot is a point-in-time image of your entire server state that can be restored instantly.",
+    example:
+      "Daily backups protect your data; snapshots let you restore your entire server to yesterday's state in minutes.",
+    category: "Reliability",
+  },
+  {
+    term: "Data Center / Region",
+    definition:
+      "The physical facility where servers are housed, with redundant power, cooling, and network connections. Choosing a region close to your users reduces latency.",
+    example:
+      "Hosting in Frankfurt serves European users faster than a server in New York.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Egress / Ingress",
+    definition:
+      "Egress is data leaving your server (downloads, responses to users). Ingress is data coming in (uploads, requests). Many providers charge extra for egress beyond a certain limit.",
+    example:
+      "Streaming video to users consumes high egress bandwidth; uploading files uses ingress.",
+    category: "Network",
+  },
+  {
+    term: "Hypervisor",
+    definition:
+      "Software that creates and manages virtual machines on physical hardware. It allocates resources and ensures each VPS is isolated from others on the same host.",
+    example:
+      "KVM and VMware are common hypervisors; KVM is open-source and widely used for VPS hosting.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Root Access",
+    definition:
+      "Full administrative control over your server, allowing you to install any software, modify system settings, and access all files. With great power comes great responsibility.",
+    example:
+      "Root access lets you install custom software, but also means you're responsible for security updates.",
+    category: "Security",
+  },
+  {
+    term: "Managed vs Unmanaged",
+    definition:
+      "Managed hosting means the provider handles server maintenance, updates, and security. Unmanaged means you're responsible for everything—usually cheaper but requires technical knowledge.",
+    example:
+      "Choose managed if you want to focus on your app; unmanaged if you want full control and lower costs.",
+    category: "Infrastructure",
+  },
+  {
+    term: "CDN (Content Delivery Network)",
+    definition:
+      "A global network of servers that cache and deliver your content from locations close to users. Reduces load on your main server and speeds up delivery of static assets.",
+    example:
+      "Images hosted on a CDN load from a server in Tokyo for Japanese users, New York for US users.",
+    category: "Network",
+  },
+  {
+    term: "Rate Limiting",
+    definition:
+      "Controlling how many requests a user or IP can make in a given time period. Protects your server from abuse, brute force attacks, and ensures fair resource usage.",
+    example:
+      "Limiting login attempts to 5 per minute prevents password guessing attacks.",
+    category: "Security",
+  },
+  {
+    term: "Cron Job",
+    definition:
+      "A scheduled task that runs automatically at specified times or intervals. Used for maintenance tasks, backups, sending emails, or any recurring automated work.",
+    example:
+      "A cron job might clear temporary files every night at 3 AM or send weekly report emails.",
+    category: "Infrastructure",
+  },
+  {
+    term: "Port",
+    definition:
+      "A numbered endpoint for network communication. Different services use different ports—web servers typically use 80 (HTTP) and 443 (HTTPS), while databases use ports like 5432 (PostgreSQL).",
+    example:
+      "If your app runs on port 3000, you might use a reverse proxy to forward traffic from port 443.",
+    category: "Network",
+  },
 ];
 
 const categories = [
