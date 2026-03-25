@@ -89,13 +89,6 @@ export default function LandingPage() {
           variants={stagger}
           className="relative mx-auto max-w-4xl px-6 text-center"
         >
-          <motion.div variants={fadeInUp} className="mb-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4 text-primary" />
-              Transparent Hosting, Simplified
-            </span>
-          </motion.div>
-
           <motion.h1
             variants={fadeInUp}
             className="text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
