@@ -9,10 +9,15 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "hzel",
-  description: "Container management dashboard",
+  title: "hzel - Transparent Hosting for Everyone",
+  description: "Discover hosting that puts you in control. Fair pricing, full data ownership, no overcrowding, and privacy by default. Learn how hosting works and experience the difference.",
   icons: {
     icon: { url: "https://content.hzel.org/branding/logo.svg", type: "image/svg+xml" },
+  },
+  openGraph: {
+    title: "hzel - Transparent Hosting for Everyone",
+    description: "Hosting that puts you in control. Fair pricing, full data ownership, no overcrowding, and privacy by default.",
+    type: "website",
   },
 };
 
