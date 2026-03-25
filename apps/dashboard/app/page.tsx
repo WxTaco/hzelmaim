@@ -1,5 +1,6 @@
 "use client";
 
+// Modernized landing page with brand color #00a4ff
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Server, BookOpen, Sparkles, Shield } from "lucide-react";
