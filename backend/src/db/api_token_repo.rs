@@ -18,7 +18,7 @@ pub trait ApiTokenRepo: Send + Sync {
     /// Marks a token as revoked. Only succeeds if the token belongs to `user_id`.
     async fn revoke(&self, token_id: Uuid, user_id: Uuid) -> Result<bool, ApiError>;
 
-    /// Lists all tokens for a user (including revoked ones for auditing).
+    /// Lists all active (non-revoked) tokens for a user.
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<ApiTokenRecord>, ApiError>;
 
     /// Updates the `last_used_at` timestamp for a token.
@@ -117,7 +117,8 @@ impl ApiTokenRepo for PgApiTokenRepo {
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<ApiTokenRecord>, ApiError> {
         let rows = sqlx::query_as::<_, ApiTokenRow>(
             "SELECT id, user_id, name, token_hash, prefix, last_used_at, expires_at, \
-             created_at, revoked_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC",
+             created_at, revoked_at FROM api_tokens \
+             WHERE user_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC",
         )
         .bind(user_id)
         .fetch_all(&self.pool)
