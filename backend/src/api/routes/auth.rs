@@ -27,6 +27,6 @@ pub fn router() -> Router<AppState> {
             Router::new()
                 .route("/", post(auth::create_token))
                 .route("/", get(auth::list_tokens))
-                .route("/:id", delete(auth::revoke_token)),
+                .route("/{id}", delete(auth::revoke_token)),
         )
 }
