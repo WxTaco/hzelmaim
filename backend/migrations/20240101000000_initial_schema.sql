@@ -1,9 +1,9 @@
 -- Consolidated initial schema for the platform control plane.
 -- Single source of truth — all tables, columns, constraints, and indexes.
 
--- ---------------------------------------------------------------------------
+ 
 -- Users
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE users (
     id           UUID        PRIMARY KEY,
     email        TEXT        NOT NULL UNIQUE,
@@ -14,9 +14,9 @@ CREATE TABLE users (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- OIDC identities
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE oidc_identities (
     id         UUID        PRIMARY KEY,
     user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -27,9 +27,9 @@ CREATE TABLE oidc_identities (
     UNIQUE (issuer, subject)
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Sessions  (auth_method includes 'pat' for PAT-backed virtual sessions)
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE user_sessions (
     id          UUID        PRIMARY KEY,
     user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -41,9 +41,9 @@ CREATE TABLE user_sessions (
     revoked_at  TIMESTAMPTZ
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Containers
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE containers (
     id           UUID        PRIMARY KEY,
     proxmox_ctid INTEGER     NOT NULL UNIQUE,
@@ -64,9 +64,9 @@ CREATE TABLE container_ownerships (
     PRIMARY KEY (container_id, user_id)
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Commands
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE command_definitions (
     id            UUID        PRIMARY KEY,
     owner_user_id UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -88,9 +88,9 @@ CREATE TABLE command_execution_logs (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Audit log
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE audit_logs (
     id           UUID        PRIMARY KEY,
     user_id      UUID        REFERENCES users(id)      ON DELETE SET NULL,
@@ -101,9 +101,8 @@ CREATE TABLE audit_logs (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ---------------------------------------------------------------------------
 -- Programs & invitations (RBAC)
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE programs (
     id                    UUID        PRIMARY KEY,
     name                  TEXT        NOT NULL,
@@ -123,9 +122,9 @@ CREATE TABLE program_invitations (
     response     TEXT        CHECK (response IN ('accepted', 'declined'))
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Personal access tokens
--- ---------------------------------------------------------------------------
+ 
 CREATE TABLE api_tokens (
     id           UUID        PRIMARY KEY,
     user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -138,9 +137,9 @@ CREATE TABLE api_tokens (
     revoked_at   TIMESTAMPTZ
 );
 
--- ---------------------------------------------------------------------------
+ 
 -- Indexes
--- ---------------------------------------------------------------------------
+ 
 CREATE INDEX idx_oidc_identities_user_id             ON oidc_identities (user_id);
 CREATE INDEX idx_user_sessions_user_id               ON user_sessions (user_id);
 CREATE INDEX idx_user_sessions_expires_at            ON user_sessions (expires_at);
