@@ -12,10 +12,7 @@ use crate::{
         context::{AuthenticatedSession, AuthenticatedUser},
         store::AuthStore,
     },
-    models::{
-        session::AuthMethod,
-        user::{UserRole, UserStatus},
-    },
+    models::user::{UserRole, UserStatus},
     utils::error::ApiError,
 };
 
@@ -94,16 +91,13 @@ impl SessionService {
         Ok(AuthenticatedSession {
             user: AuthenticatedUser {
                 user_id: user.id,
-                session_id: session.id,
+                session_id: Some(session.id),
                 email: user.email,
                 role: match user.role {
                     UserRole::Admin => UserRole::Admin,
                     UserRole::User => UserRole::User,
                 },
-                auth_method: match session.auth_method {
-                    AuthMethod::Session => AuthMethod::Session,
-                    AuthMethod::Oidc => AuthMethod::Oidc,
-                },
+                auth_method: session.auth_method.clone(),
                 authenticated_at: session.created_at,
             },
             csrf_token: session.csrf_token,

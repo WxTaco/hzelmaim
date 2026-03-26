@@ -15,9 +15,9 @@ use hzel_backend::{
     },
     config::AppConfig,
     db::{
-        self, audit_repo::PgAuditRepo, command_repo::PgCommandRepo,
-        container_repo::PgContainerRepo, pg_auth_store::PgAuthStore,
-        program_repo::PgProgramRepo, user_repo::PgUserRepo,
+        self, api_token_repo::PgApiTokenRepo, audit_repo::PgAuditRepo,
+        command_repo::PgCommandRepo, container_repo::PgContainerRepo,
+        pg_auth_store::PgAuthStore, program_repo::PgProgramRepo, user_repo::PgUserRepo,
     },
     jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
@@ -113,6 +113,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(PgCommandRepo::new(pool.clone()));
     let user_repo: Arc<dyn hzel_backend::db::user_repo::UserRepo> =
         Arc::new(PgUserRepo::new(pool.clone()));
+    let api_token_repo: Arc<dyn hzel_backend::db::api_token_repo::ApiTokenRepo> =
+        Arc::new(PgApiTokenRepo::new(pool.clone()));
 
     // SSH CA — load if configured, otherwise skip (terminal sessions won't be available).
     let ssh_ca: Option<Arc<SshCa>> =
@@ -185,6 +187,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         terminal_service,
         program_service,
         user_repo,
+        api_token_repo,
         oidc_service,
     );
 

@@ -8,8 +8,12 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthMethod {
+    /// Browser session backed by a session cookie.
     Session,
+    /// JWT minted after an OIDC authorization-code flow.
     Oidc,
+    /// Personal access token (stateless, no session row).
+    Pat,
 }
 
 /// Persistent session record stored by the backend.

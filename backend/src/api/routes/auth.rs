@@ -1,7 +1,7 @@
 //! Authentication and health route definitions.
 
 use axum::{
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 
@@ -21,5 +21,12 @@ pub fn router() -> Router<AppState> {
                 .route("/refresh", post(auth::refresh_token))
                 .route("/oidc/authorize", get(auth::oidc_authorize))
                 .route("/oidc/callback", get(auth::oidc_callback)),
+        )
+        .nest(
+            "/api/v1/tokens",
+            Router::new()
+                .route("/", post(auth::create_token))
+                .route("/", get(auth::list_tokens))
+                .route("/:id", delete(auth::revoke_token)),
         )
 }

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     auth::{jwt::JwtService, oidc::OidcService, session::SessionService},
     config::AppConfig,
-    db::user_repo::UserRepo,
+    db::{api_token_repo::ApiTokenRepo, user_repo::UserRepo},
     services::{
         command_service::CommandService, container_service::ContainerService,
         program_service::ProgramService, terminal_service::TerminalService,
@@ -23,11 +23,13 @@ pub struct AppState {
     pub terminal_service: Arc<TerminalService>,
     pub program_service: Arc<ProgramService>,
     pub user_repo: Arc<dyn UserRepo>,
+    pub api_token_repo: Arc<dyn ApiTokenRepo>,
     pub oidc_service: Option<Arc<OidcService>>,
 }
 
 impl AppState {
     /// Creates a new application state container.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: Arc<AppConfig>,
         session_service: Arc<SessionService>,
@@ -37,6 +39,7 @@ impl AppState {
         terminal_service: Arc<TerminalService>,
         program_service: Arc<ProgramService>,
         user_repo: Arc<dyn UserRepo>,
+        api_token_repo: Arc<dyn ApiTokenRepo>,
         oidc_service: Option<Arc<OidcService>>,
     ) -> Self {
         Self {
@@ -48,6 +51,7 @@ impl AppState {
             terminal_service,
             program_service,
             user_repo,
+            api_token_repo,
             oidc_service,
         }
     }

@@ -1,5 +1,6 @@
 //! Database connection pool and repository implementations.
 
+pub mod api_token_repo;
 pub mod audit_repo;
 pub mod command_repo;
 pub mod container_repo;

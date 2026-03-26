@@ -28,19 +28,20 @@ impl FromRequestParts<AppState> for CsrfProtected {
         let headers = parts.headers.clone();
 
         async move {
-            // Check if this is a JWT token request (Authorization header present)
-            let is_jwt_auth = headers
+            // Stateless auth (PAT or JWT) arrives via `Authorization: Bearer <token>`.
+            // These are not sent by the browser implicitly, so they are not vulnerable
+            // to CSRF and do not require the CSRF header.
+            let is_bearer = headers
                 .get(axum::http::header::AUTHORIZATION)
                 .and_then(|h| h.to_str().ok())
                 .map(|h| h.starts_with("Bearer "))
                 .unwrap_or(false);
 
-            // If using JWT tokens, skip CSRF validation (not needed for stateless tokens)
-            if is_jwt_auth {
+            if is_bearer {
                 return Ok(Self);
             }
 
-            // For session-based auth, validate CSRF token
+            // Session-cookie auth requires CSRF validation.
             let session = match session_from_extensions {
                 Some(session) => session,
                 None => session_service.authenticate_headers(&headers).await?,
@@ -87,7 +88,7 @@ mod tests {
         AuthenticatedSession {
             user: AuthenticatedUser {
                 user_id: Uuid::new_v4(),
-                session_id: Uuid::new_v4(),
+                session_id: Some(Uuid::new_v4()),
                 email: "admin@example.internal".into(),
                 role: UserRole::Admin,
                 auth_method: AuthMethod::Session,

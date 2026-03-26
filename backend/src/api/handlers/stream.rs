@@ -5,6 +5,7 @@ use axum::{
         ws::{Message, WebSocket},
         Path, Query, State, WebSocketUpgrade,
     },
+    http::HeaderMap,
     response::Response,
 };
 use futures::{SinkExt, StreamExt};
@@ -15,7 +16,7 @@ use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
-    auth::context::{validate_jwt_token, AuthenticatedUser},
+    auth::{context::AuthenticatedUser, resolver},
     jobs::terminal::{TerminalClientMsg, TerminalStreamEvent},
     utils::error::ApiError,
 };
@@ -61,13 +62,13 @@ pub async fn terminal_stream(
     Path(container_id): Path<Uuid>,
     Query(auth_query): Query<WsAuthQuery>,
     State(state): State<AppState>,
+    headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> Result<Response, ApiError> {
-    // Extract JWT token from query parameter
-    let token = auth_query.token.ok_or_else(ApiError::unauthorized)?;
-
-    // Validate JWT token and get authenticated user
-    let user = validate_jwt_token(&token, &state.jwt_service, &state.user_repo).await?;
+    // Resolve the authenticated user. WebSocket clients can't set custom headers,
+    // so the token is carried in the `?token=` query parameter instead.
+    let bearer = auth_query.token.as_deref();
+    let user = resolver::resolve_authenticated_user(&headers, bearer, &state).await?;
 
     Ok(ws.on_upgrade(move |socket| async move {
         if let Err(e) = handle_terminal(socket, container_id, user, state).await {
