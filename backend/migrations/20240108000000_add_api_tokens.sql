@@ -1,6 +1,6 @@
 -- Personal access tokens for API authentication.
 
-CREATE TABLE api_tokens (
+CREATE TABLE IF NOT EXISTS api_tokens (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -15,6 +15,6 @@ CREATE TABLE api_tokens (
     revoked_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_api_tokens_user_id ON api_tokens (user_id);
-CREATE INDEX idx_api_tokens_token_hash ON api_tokens (token_hash);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens (user_id);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_token_hash ON api_tokens (token_hash);
 
