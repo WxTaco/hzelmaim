@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     revoked_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens (user_id);
+-- Add columns that may be missing if the table was created by an older migration.
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS name        TEXT;
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS token_hash  TEXT;
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS prefix      TEXT;
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS expires_at  TIMESTAMPTZ;
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS revoked_at  TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id    ON api_tokens (user_id);
 CREATE INDEX IF NOT EXISTS idx_api_tokens_token_hash ON api_tokens (token_hash);
 
