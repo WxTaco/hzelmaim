@@ -9,6 +9,10 @@ use crate::utils::error::ApiError;
 
 /**
  * JWT claims for access tokens (short-lived, ~15 minutes).
+ *
+ * Shared by both OIDC session tokens and OAuth application tokens:
+ * - OIDC tokens: `session_id` is set, `client_id` and `scopes` are absent.
+ * - OAuth tokens: `client_id` and `scopes` are set, `session_id` is absent.
  */
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
@@ -25,7 +29,17 @@ pub struct AccessTokenClaims {
     /// without an extra round-trip.
     #[serde(default)]
     pub role: String,
-    pub session_id: String,
+    /// Present on OIDC session tokens; absent on OAuth application tokens.
+    #[serde(default)]
+    pub session_id: Option<String>,
+    /// Registered OAuth application that requested this token.
+    /// Absent on OIDC session tokens.
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// OAuth scopes granted by the user to the application.
+    /// Empty / absent on OIDC session tokens.
+    #[serde(default)]
+    pub scopes: Vec<String>,
     pub iat: i64, // issued at
     pub exp: i64, // expiration
 }
@@ -81,7 +95,9 @@ impl JwtService {
             display_name,
             picture_url,
             role,
-            session_id: session_id.to_string(),
+            session_id: Some(session_id.to_string()),
+            client_id: None,
+            scopes: vec![],
             iat: now.timestamp(),
             exp: (now + Duration::minutes(self.access_token_ttl_minutes)).timestamp(),
         };
@@ -108,6 +124,42 @@ impl JwtService {
             session_id: session_id.to_string(),
             iat: now.timestamp(),
             exp: (now + Duration::hours(self.refresh_token_ttl_hours)).timestamp(),
+        };
+
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(self.secret.as_bytes()),
+        )
+        .map_err(|e| ApiError::internal(format!("Token generation failed: {e}")))
+    }
+
+    /**
+     * Generates an OAuth access token for a third-party application acting on behalf of a user.
+     *
+     * Unlike OIDC session tokens, OAuth tokens carry `client_id` and `scopes` instead of a
+     * `session_id`. The TTL matches the standard access token lifetime (~15 minutes).
+     */
+    pub fn generate_oauth_access_token(
+        &self,
+        user_id: Uuid,
+        email: String,
+        role: String,
+        client_id: String,
+        scopes: Vec<String>,
+    ) -> Result<String, ApiError> {
+        let now = Utc::now();
+        let claims = AccessTokenClaims {
+            sub: user_id.to_string(),
+            email,
+            display_name: None,
+            picture_url: None,
+            role,
+            session_id: None,
+            client_id: Some(client_id),
+            scopes,
+            iat: now.timestamp(),
+            exp: (now + Duration::minutes(self.access_token_ttl_minutes)).timestamp(),
         };
 
         encode(

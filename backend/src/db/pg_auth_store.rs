@@ -69,6 +69,7 @@ fn parse_auth_method(s: &str) -> AuthMethod {
     match s {
         "oidc" => AuthMethod::Oidc,
         "pat" => AuthMethod::Pat,
+        "oauth" => AuthMethod::Oauth,
         _ => AuthMethod::Session,
     }
 }
@@ -152,6 +153,7 @@ impl AuthStore for PgAuthStore {
             AuthMethod::Session => "session",
             AuthMethod::Oidc => "oidc",
             AuthMethod::Pat => "pat",
+            AuthMethod::Oauth => "oauth",
         };
         sqlx::query(
             "INSERT INTO user_sessions (id, user_id, csrf_token, auth_method, expires_at, created_at, last_seen_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",

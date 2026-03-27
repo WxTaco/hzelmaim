@@ -34,7 +34,7 @@ CREATE TABLE user_sessions (
     id          UUID        PRIMARY KEY,
     user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     csrf_token  TEXT        NOT NULL,
-    auth_method TEXT        NOT NULL CHECK (auth_method IN ('session', 'oidc', 'pat')),
+    auth_method TEXT        NOT NULL CHECK (auth_method IN ('session', 'oidc', 'pat', 'oauth')),
     expires_at  TIMESTAMPTZ NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -93,6 +93,7 @@ mod tests {
                 role: UserRole::Admin,
                 auth_method: AuthMethod::Session,
                 authenticated_at: Utc::now(),
+                oauth_scopes: None,
             },
             csrf_token: "csrf-token-123".into(),
             expires_at: Utc::now(),

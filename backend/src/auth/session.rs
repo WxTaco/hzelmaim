@@ -99,6 +99,7 @@ impl SessionService {
                 },
                 auth_method: session.auth_method.clone(),
                 authenticated_at: session.created_at,
+                oauth_scopes: None,
             },
             csrf_token: session.csrf_token,
             expires_at: session.expires_at,

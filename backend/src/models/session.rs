@@ -14,6 +14,8 @@ pub enum AuthMethod {
     Oidc,
     /// Personal access token (stateless, no session row).
     Pat,
+    /// JWT minted for a registered OAuth 2.0 application acting on behalf of a user.
+    Oauth,
 }
 
 /// Persistent session record stored by the backend.

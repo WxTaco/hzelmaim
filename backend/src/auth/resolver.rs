@@ -114,16 +114,14 @@ async fn resolve_pat(token: &str, state: &AppState) -> Result<AuthenticatedUser,
         role: user.role,
         auth_method: AuthMethod::Pat,
         authenticated_at: Utc::now(),
+        oauth_scopes: None,
     })
 }
 
 async fn resolve_jwt(token: &str, state: &AppState) -> Result<AuthenticatedUser, ApiError> {
     let claims = state.jwt_service.validate_access_token(token)?;
 
-    let user_id =
-        uuid::Uuid::parse_str(&claims.sub).map_err(|_| ApiError::unauthorized())?;
-    let session_id =
-        uuid::Uuid::parse_str(&claims.session_id).map_err(|_| ApiError::unauthorized())?;
+    let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| ApiError::unauthorized())?;
 
     let user = state
         .user_repo
@@ -131,13 +129,33 @@ async fn resolve_jwt(token: &str, state: &AppState) -> Result<AuthenticatedUser,
         .await?
         .ok_or_else(ApiError::unauthorized)?;
 
-    Ok(AuthenticatedUser {
-        user_id: user.id,
-        session_id: Some(session_id),
-        email: user.email,
-        role: user.role,
-        auth_method: AuthMethod::Oidc,
-        authenticated_at: Utc::now(),
-    })
+    // Dispatch on token type: OAuth tokens carry a client_id; OIDC tokens carry a session_id.
+    if let Some(client_id) = claims.client_id {
+        Ok(AuthenticatedUser {
+            user_id: user.id,
+            session_id: None,
+            email: user.email,
+            role: user.role,
+            auth_method: AuthMethod::Oauth,
+            authenticated_at: Utc::now(),
+            oauth_scopes: Some(claims.scopes),
+        })
+    } else {
+        let session_id = claims
+            .session_id
+            .as_deref()
+            .and_then(|s| uuid::Uuid::parse_str(s).ok())
+            .ok_or_else(ApiError::unauthorized)?;
+
+        Ok(AuthenticatedUser {
+            user_id: user.id,
+            session_id: Some(session_id),
+            email: user.email,
+            role: user.role,
+            auth_method: AuthMethod::Oidc,
+            authenticated_at: Utc::now(),
+            oauth_scopes: None,
+        })
+    }
 }
 

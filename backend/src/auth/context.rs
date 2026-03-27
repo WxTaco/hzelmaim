@@ -16,12 +16,14 @@ use crate::{
 #[derive(Debug, Clone, Serialize)]
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
-    /// Present for session/OIDC auth; `None` for stateless PAT authentication.
+    /// Present for session/OIDC auth; `None` for stateless PAT/OAuth authentication.
     pub session_id: Option<Uuid>,
     pub email: String,
     pub role: UserRole,
     pub auth_method: AuthMethod,
     pub authenticated_at: DateTime<Utc>,
+    /// Scopes granted by the user to an OAuth application. `None` for non-OAuth auth methods.
+    pub oauth_scopes: Option<Vec<String>>,
 }
 
 /// Authenticated session context derived from a request cookie.
