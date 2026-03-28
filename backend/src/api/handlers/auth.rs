@@ -23,11 +23,25 @@ use crate::{
 };
 
 /// Lightweight health endpoint for orchestration systems.
+#[utoipa::path(
+    get,
+    path = "/api/v1/healthz",
+    responses((status = 200, description = "Service is healthy")),
+    tag = "health",
+)]
 pub async fn health() -> Json<ApiResponse<&'static str>> {
     Json(ApiResponse::new("ok"))
 }
 
 /// Placeholder login endpoint reserved for future OIDC and session bootstrap.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    responses(
+        (status = 501, description = "Not implemented — use /api/v1/auth/oidc/authorize"),
+    ),
+    tag = "auth",
+)]
 pub async fn login() -> Result<Json<ApiResponse<&'static str>>, ApiError> {
     Err(ApiError::not_implemented(
         "Use /api/v1/auth/oidc/authorize for login",
@@ -35,6 +49,15 @@ pub async fn login() -> Result<Json<ApiResponse<&'static str>>, ApiError> {
 }
 
 /// Redirects the user agent to the OIDC provider's authorization endpoint.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/oidc/authorize",
+    responses(
+        (status = 302, description = "Redirect to OIDC provider"),
+        (status = 501, description = "OIDC not enabled"),
+    ),
+    tag = "auth",
+)]
 pub async fn oidc_authorize(State(state): State<AppState>) -> Result<Redirect, ApiError> {
     let oidc = state
         .oidc_service
@@ -54,6 +77,19 @@ pub struct OidcCallbackParams {
 
 /// Handles the OIDC provider callback, exchanges the code, creates a session,
 /// and redirects to frontend with JWT tokens in URL.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/oidc/callback",
+    params(
+        ("code" = String, Query, description = "Authorization code from the OIDC provider"),
+        ("state" = String, Query, description = "State parameter for CSRF validation"),
+    ),
+    responses(
+        (status = 302, description = "Redirect to frontend with tokens"),
+        (status = 401, description = "Invalid code or state"),
+    ),
+    tag = "auth",
+)]
 pub async fn oidc_callback(
     State(state): State<AppState>,
     Query(params): Query<OidcCallbackParams>,
@@ -98,11 +134,21 @@ pub async fn oidc_callback(
 }
 
 /// Refresh token endpoint - exchanges a refresh token for a new access token.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/refresh",
+    request_body = RefreshTokenRequest,
+    responses(
+        (status = 200, description = "New access token issued", body = inline(ApiResponse<TokenResponse>)),
+        (status = 401, description = "Invalid or expired refresh token"),
+    ),
+    tag = "auth",
+)]
 pub async fn refresh_token(
     State(state): State<AppState>,
     Json(body): Json<RefreshTokenRequest>,
@@ -142,6 +188,16 @@ pub async fn refresh_token(
 }
 
 /// Get current authenticated user info.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/me",
+    responses(
+        (status = 200, description = "Current user info", body = inline(ApiResponse<UserInfoResponse>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "auth",
+)]
 pub async fn me(user: AuthenticatedUser) -> Json<ApiResponse<UserInfoResponse>> {
     Json(ApiResponse::new(UserInfoResponse {
         user_id: user.user_id.to_string(),
@@ -152,6 +208,16 @@ pub async fn me(user: AuthenticatedUser) -> Json<ApiResponse<UserInfoResponse>> 
 }
 
 /// Session logout endpoint.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout",
+    responses(
+        (status = 200, description = "Session revoked"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "auth",
+)]
 pub async fn logout(
     _csrf: CsrfProtected,
     State(state): State<AppState>,
@@ -163,6 +229,16 @@ pub async fn logout(
 }
 
 /// Returns the currently authenticated session context.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/session",
+    responses(
+        (status = 200, description = "Session context", body = inline(ApiResponse<SessionView>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "auth",
+)]
 pub async fn session(
     State(state): State<AppState>,
     session: AuthenticatedSession,
@@ -187,7 +263,7 @@ pub async fn session(
 }
 
 /// Read-only session information for frontend bootstrap.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct SessionView {
     pub user: AuthenticatedUser,
     pub session: SessionDetails,
@@ -196,7 +272,7 @@ pub struct SessionView {
 }
 
 /// Concrete session metadata returned to authenticated clients.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct SessionDetails {
     pub session_id: uuid::Uuid,
     pub csrf_token: String,
@@ -205,7 +281,7 @@ pub struct SessionDetails {
 }
 
 /// JWT token response for cross-domain authentication.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct TokenResponse {
     pub access_token: String,
     pub refresh_token: String,
@@ -214,7 +290,7 @@ pub struct TokenResponse {
 }
 
 /// Current user information response.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct UserInfoResponse {
     pub user_id: String,
     pub email: String,
@@ -225,7 +301,7 @@ pub struct UserInfoResponse {
 // ── Personal Access Token endpoints ────────────────────────────────────────
 
 /// Request body for creating a new PAT.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateTokenRequest {
     pub name: String,
     /// Optional expiry. `null` / omitted means the token never expires.
@@ -233,7 +309,7 @@ pub struct CreateTokenRequest {
 }
 
 /// Response returned once when a PAT is created (includes the raw token value).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct CreateTokenResponse {
     /// The raw token value. Store it now — it is never shown again.
     pub token: String,
@@ -244,6 +320,18 @@ pub struct CreateTokenResponse {
 /// `POST /api/v1/tokens` — create a new personal access token.
 ///
 /// Not accessible via OAuth application tokens.
+#[utoipa::path(
+    post,
+    path = "/api/v1/tokens",
+    request_body = CreateTokenRequest,
+    responses(
+        (status = 200, description = "Token created — raw value shown only once", body = inline(ApiResponse<CreateTokenResponse>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — not available to OAuth tokens"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "tokens",
+)]
 pub async fn create_token(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -289,6 +377,17 @@ pub async fn create_token(
 /// `GET /api/v1/tokens` — list all PATs belonging to the authenticated user.
 ///
 /// Not accessible via OAuth application tokens.
+#[utoipa::path(
+    get,
+    path = "/api/v1/tokens",
+    responses(
+        (status = 200, description = "List of personal access tokens", body = inline(ApiResponse<Vec<ApiTokenView>>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — not available to OAuth tokens"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "tokens",
+)]
 pub async fn list_tokens(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -302,6 +401,19 @@ pub async fn list_tokens(
 /// `DELETE /api/v1/tokens/:id` — revoke one of the authenticated user's PATs.
 ///
 /// Not accessible via OAuth application tokens.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/tokens/{id}",
+    params(("id" = uuid::Uuid, Path, description = "Token UUID")),
+    responses(
+        (status = 200, description = "Token revoked"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — not available to OAuth tokens"),
+        (status = 404, description = "Token not found or already revoked"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "tokens",
+)]
 pub async fn revoke_token(
     State(state): State<AppState>,
     user: AuthenticatedUser,

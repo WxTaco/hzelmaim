@@ -17,13 +17,27 @@ use crate::{
 };
 
 /// HTTP payload used to enqueue a command for a container.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct EnqueueCommandBody {
     pub program: String,
     pub args: Vec<String>,
 }
 
 /// Enqueues a command job.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/{container_id}/commands",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    request_body = EnqueueCommandBody,
+    responses(
+        (status = 200, description = "Command enqueued", body = inline(ApiResponse<CommandExecutionRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Container not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "commands",
+)]
 pub async fn enqueue(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
@@ -42,6 +56,18 @@ pub async fn enqueue(
 }
 
 /// Returns the current state of a queued or running command.
+#[utoipa::path(
+    get,
+    path = "/api/v1/commands/{job_id}",
+    params(("job_id" = uuid::Uuid, Path, description = "Command job UUID")),
+    responses(
+        (status = 200, description = "Command execution record", body = inline(ApiResponse<CommandExecutionRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "commands",
+)]
 pub async fn get(
     Path(job_id): Path<Uuid>,
     State(state): State<AppState>,

@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Authenticated actor attached to requests by the session layer.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
     /// Present for session/OIDC auth; `None` for stateless PAT/OAuth authentication.

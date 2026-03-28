@@ -45,7 +45,7 @@ pub enum ContainerRuntimeStatus {
 }
 
 /// Point-in-time container metrics surfaced to the dashboard.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ContainerMetrics {
     pub cpu_percent: f32,
     pub memory_used_mb: u32,

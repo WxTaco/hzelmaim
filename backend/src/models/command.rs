@@ -16,7 +16,7 @@ pub struct CommandDefinitionRecord {
 }
 
 /// Execution status for queued container commands.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CommandExecutionStatus {
     Queued,
@@ -27,7 +27,7 @@ pub enum CommandExecutionStatus {
 }
 
 /// Immutable execution record used by APIs and audit trails.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CommandExecutionRecord {
     pub id: Uuid,
     pub container_id: Uuid,

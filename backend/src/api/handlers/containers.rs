@@ -18,7 +18,7 @@ use crate::{
 
 /// Simplified API request body for container creation.
 /// Server-side config provides node_name, template, and default resource limits.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct ApiCreateContainerRequest {
     pub hostname: String,
     /// Optional overrides for resource limits.
@@ -28,6 +28,16 @@ pub struct ApiCreateContainerRequest {
 }
 
 /// Returns containers visible to the authenticated actor.
+#[utoipa::path(
+    get,
+    path = "/api/v1/containers",
+    responses(
+        (status = 200, description = "List of containers", body = inline(ApiResponse<Vec<ContainerRecord>>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn list(
     State(state): State<AppState>,
     actor: AuthenticatedUser,
@@ -38,6 +48,19 @@ pub async fn list(
 }
 
 /// Creates a new secure unprivileged LXC container.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers",
+    request_body = ApiCreateContainerRequest,
+    responses(
+        (status = 200, description = "Container created", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: AuthenticatedUser, Json(body): Json<ApiCreateContainerRequest>) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
     // Check program-based permission — admins always pass, others need an accepted
     // membership in a program that grants can_create_containers.
@@ -69,6 +92,20 @@ pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: 
 }
 
 /// Returns a single container by id.
+#[utoipa::path(
+    get,
+    path = "/api/v1/containers/{container_id}",
+    params(
+        ("container_id" = uuid::Uuid, Path, description = "Container UUID"),
+    ),
+    responses(
+        (status = 200, description = "Container record", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn get(
     Path(container_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -85,6 +122,18 @@ pub async fn get(
 /// `state` field reflects the actual runtime state rather than an optimistic
 /// guess. Returns `state: "failed"` if the transition could not be confirmed
 /// within the polling window.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/{container_id}/start",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    responses(
+        (status = 200, description = "Container started", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn start(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
@@ -101,6 +150,18 @@ pub async fn start(
 /// `state` field reflects the actual runtime state rather than an optimistic
 /// guess. Returns `state: "failed"` if the transition could not be confirmed
 /// within the polling window.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/{container_id}/stop",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    responses(
+        (status = 200, description = "Container stopped", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn stop(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
@@ -117,6 +178,18 @@ pub async fn stop(
 /// `state` field reflects the actual runtime state rather than an optimistic
 /// guess. Returns `state: "failed"` if the transition could not be confirmed
 /// within the polling window.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/{container_id}/restart",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    responses(
+        (status = 200, description = "Container restarted", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn restart(
     Path(container_id): Path<Uuid>,
     _csrf: CsrfProtected,
@@ -131,6 +204,18 @@ pub async fn restart(
 }
 
 /// Returns container metrics.
+#[utoipa::path(
+    get,
+    path = "/api/v1/containers/{container_id}/metrics",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    responses(
+        (status = 200, description = "Container metrics", body = inline(ApiResponse<ContainerMetrics>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
 pub async fn metrics(
     Path(container_id): Path<Uuid>,
     State(state): State<AppState>,

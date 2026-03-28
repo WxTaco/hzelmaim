@@ -27,7 +27,7 @@ pub struct ApiTokenRecord {
 }
 
 /// Subset of token fields that are safe to return to the owner.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ApiTokenView {
     pub id: Uuid,
     pub name: String,

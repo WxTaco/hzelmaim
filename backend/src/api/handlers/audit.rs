@@ -12,6 +12,17 @@ use crate::{
 /// Returns audit logs to administrators only.
 ///
 /// OAuth application tokens are never permitted, even for admin accounts.
+#[utoipa::path(
+    get,
+    path = "/api/v1/audit-logs",
+    responses(
+        (status = 200, description = "Audit log entries", body = inline(ApiResponse<Vec<AuditLogRecord>>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — admin only"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "audit",
+)]
 pub async fn list(
     actor: AuthenticatedUser,
 ) -> Result<Json<ApiResponse<Vec<AuditLogRecord>>>, ApiError> {

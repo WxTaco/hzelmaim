@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Lifecycle state tracked by the control plane.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ContainerState {
     Provisioning,
@@ -15,7 +15,7 @@ pub enum ContainerState {
 }
 
 /// Access level a user holds on a container.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AccessLevel {
     Owner,
@@ -24,7 +24,7 @@ pub enum AccessLevel {
 }
 
 /// Relationship between a user and a container.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ContainerOwnership {
     pub container_id: Uuid,
     pub user_id: Uuid,
@@ -33,7 +33,7 @@ pub struct ContainerOwnership {
 }
 
 /// Database-backed container record.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ContainerRecord {
     pub id: Uuid,
     pub proxmox_ctid: i32,

@@ -19,6 +19,7 @@ sha2 = "0.11.0"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "migrate"] }
 ssh-key = { version = "0.6.7", features = ["ed25519", "getrandom", "std", "crypto"] }
 thiserror = "2"
+utoipa = { version = "5", features = ["uuid", "chrono"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "net"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"

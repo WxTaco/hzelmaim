@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 /// Standard success response envelope.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ApiResponse<T> {
     pub data: T,
 }

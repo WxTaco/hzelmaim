@@ -17,7 +17,7 @@ use crate::{
     utils::error::ApiError,
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateProgramBody {
     pub name: String,
     pub description: String,
@@ -25,28 +25,40 @@ pub struct CreateProgramBody {
     pub can_create_containers: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdatePermissionsBody {
     pub can_create_containers: bool,
 }
 
 /// Response for the permissions/me endpoint.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct UserPermissions {
     pub can_create_containers: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct InviteByEmailBody {
     pub email: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RespondBody {
     pub response: String,
 }
 
 /// `POST /api/v1/programs` — create a program (admin only).
+#[utoipa::path(
+    post,
+    path = "/api/v1/programs",
+    request_body = CreateProgramBody,
+    responses(
+        (status = 200, description = "Program created", body = inline(ApiResponse<ProgramRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn create_program(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -60,6 +72,19 @@ pub async fn create_program(
 }
 
 /// `GET /api/v1/programs/{program_id}` — program detail with members (admin only).
+#[utoipa::path(
+    get,
+    path = "/api/v1/programs/{program_id}",
+    params(("program_id" = uuid::Uuid, Path, description = "Program UUID")),
+    responses(
+        (status = 200, description = "Program detail", body = inline(ApiResponse<ProgramDetail>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn get_program(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -73,6 +98,19 @@ pub async fn get_program(
 }
 
 /// `PATCH /api/v1/programs/{program_id}/permissions` — update permission flags (admin only).
+#[utoipa::path(
+    patch,
+    path = "/api/v1/programs/{program_id}/permissions",
+    params(("program_id" = uuid::Uuid, Path, description = "Program UUID")),
+    request_body = UpdatePermissionsBody,
+    responses(
+        (status = 200, description = "Updated program record", body = inline(ApiResponse<ProgramRecord>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn update_permissions(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -87,6 +125,16 @@ pub async fn update_permissions(
 }
 
 /// `GET /api/v1/programs/permissions/me` — effective permissions for the current user.
+#[utoipa::path(
+    get,
+    path = "/api/v1/programs/permissions/me",
+    responses(
+        (status = 200, description = "Current user permissions", body = inline(ApiResponse<UserPermissions>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn my_permissions(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -96,6 +144,17 @@ pub async fn my_permissions(
 }
 
 /// `GET /api/v1/programs` — list all programs (admin only).
+#[utoipa::path(
+    get,
+    path = "/api/v1/programs",
+    responses(
+        (status = 200, description = "List of programs", body = inline(ApiResponse<Vec<ProgramRecord>>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn list_programs(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -105,6 +164,19 @@ pub async fn list_programs(
 }
 
 /// `POST /api/v1/programs/:program_id/invite` — invite a user by email (admin only).
+#[utoipa::path(
+    post,
+    path = "/api/v1/programs/{program_id}/invite",
+    params(("program_id" = uuid::Uuid, Path, description = "Program UUID")),
+    request_body = InviteByEmailBody,
+    responses(
+        (status = 200, description = "Invitation created", body = inline(ApiResponse<ProgramInvitation>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn invite_by_email(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -119,6 +191,16 @@ pub async fn invite_by_email(
 }
 
 /// `GET /api/v1/programs/invitations/pending` — pending invitations for the current user.
+#[utoipa::path(
+    get,
+    path = "/api/v1/programs/invitations/pending",
+    responses(
+        (status = 200, description = "Pending invitations for the current user", body = inline(ApiResponse<Vec<PendingInvitationView>>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn pending_invitations(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -128,6 +210,19 @@ pub async fn pending_invitations(
 }
 
 /// `POST /api/v1/programs/invitations/:invitation_id/respond` — accept or decline.
+#[utoipa::path(
+    post,
+    path = "/api/v1/programs/invitations/{invitation_id}/respond",
+    params(("invitation_id" = uuid::Uuid, Path, description = "Invitation UUID")),
+    request_body = RespondBody,
+    responses(
+        (status = 200, description = "Response recorded"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "programs",
+)]
 pub async fn respond(
     State(state): State<AppState>,
     user: AuthenticatedUser,

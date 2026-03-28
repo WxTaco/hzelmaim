@@ -17,7 +17,7 @@ use crate::{
 };
 
 /// Session policy expected by the authentication subsystem.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct SessionConfig {
     pub cookie_name: String,
     pub secure_cookies: bool,
