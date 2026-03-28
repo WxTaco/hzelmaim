@@ -17,6 +17,7 @@ use hzel_backend::{
     db::{
         self, api_token_repo::PgApiTokenRepo, audit_repo::PgAuditRepo,
         command_repo::PgCommandRepo, container_repo::PgContainerRepo,
+        oauth_repo::{PgOAuthAppRepo, PgOAuthCodeRepo, PgOAuthTokenRepo},
         pg_auth_store::PgAuthStore, program_repo::PgProgramRepo, user_repo::PgUserRepo,
     },
     jobs::state_sync,
@@ -115,6 +116,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(PgUserRepo::new(pool.clone()));
     let api_token_repo: Arc<dyn hzel_backend::db::api_token_repo::ApiTokenRepo> =
         Arc::new(PgApiTokenRepo::new(pool.clone()));
+    let oauth_app_repo: Arc<dyn hzel_backend::db::oauth_repo::OAuthAppRepo> =
+        Arc::new(PgOAuthAppRepo::new(pool.clone()));
+    let oauth_code_repo: Arc<dyn hzel_backend::db::oauth_repo::OAuthCodeRepo> =
+        Arc::new(PgOAuthCodeRepo::new(pool.clone()));
+    let oauth_token_repo: Arc<dyn hzel_backend::db::oauth_repo::OAuthTokenRepo> =
+        Arc::new(PgOAuthTokenRepo::new(pool.clone()));
 
     // SSH CA — load if configured, otherwise skip (terminal sessions won't be available).
     let ssh_ca: Option<Arc<SshCa>> =
@@ -188,6 +195,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         program_service,
         user_repo,
         api_token_repo,
+        oauth_app_repo,
+        oauth_code_repo,
+        oauth_token_repo,
         oidc_service,
     );
 

@@ -10,9 +10,12 @@ use crate::{
 };
 
 /// Returns audit logs to administrators only.
+///
+/// OAuth application tokens are never permitted, even for admin accounts.
 pub async fn list(
     actor: AuthenticatedUser,
 ) -> Result<Json<ApiResponse<Vec<AuditLogRecord>>>, ApiError> {
+    actor.require_not_oauth()?;
     if actor.role != UserRole::Admin {
         return Err(ApiError::forbidden(
             "Only administrators may view audit logs",

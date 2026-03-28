@@ -5,7 +5,11 @@ use std::sync::Arc;
 use crate::{
     auth::{jwt::JwtService, oidc::OidcService, session::SessionService},
     config::AppConfig,
-    db::{api_token_repo::ApiTokenRepo, user_repo::UserRepo},
+    db::{
+        api_token_repo::ApiTokenRepo,
+        oauth_repo::{OAuthAppRepo, OAuthCodeRepo, OAuthTokenRepo},
+        user_repo::UserRepo,
+    },
     services::{
         command_service::CommandService, container_service::ContainerService,
         program_service::ProgramService, terminal_service::TerminalService,
@@ -24,6 +28,9 @@ pub struct AppState {
     pub program_service: Arc<ProgramService>,
     pub user_repo: Arc<dyn UserRepo>,
     pub api_token_repo: Arc<dyn ApiTokenRepo>,
+    pub oauth_app_repo: Arc<dyn OAuthAppRepo>,
+    pub oauth_code_repo: Arc<dyn OAuthCodeRepo>,
+    pub oauth_token_repo: Arc<dyn OAuthTokenRepo>,
     pub oidc_service: Option<Arc<OidcService>>,
 }
 
@@ -40,6 +47,9 @@ impl AppState {
         program_service: Arc<ProgramService>,
         user_repo: Arc<dyn UserRepo>,
         api_token_repo: Arc<dyn ApiTokenRepo>,
+        oauth_app_repo: Arc<dyn OAuthAppRepo>,
+        oauth_code_repo: Arc<dyn OAuthCodeRepo>,
+        oauth_token_repo: Arc<dyn OAuthTokenRepo>,
         oidc_service: Option<Arc<OidcService>>,
     ) -> Self {
         Self {
@@ -52,6 +62,9 @@ impl AppState {
             program_service,
             user_repo,
             api_token_repo,
+            oauth_app_repo,
+            oauth_code_repo,
+            oauth_token_repo,
             oidc_service,
         }
     }

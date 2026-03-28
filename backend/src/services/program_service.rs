@@ -25,7 +25,7 @@ impl ProgramService {
     }
 
     fn require_admin(actor: &AuthenticatedUser) -> Result<(), ApiError> {
-        if actor.role != UserRole::Admin {
+        if actor.effective_role() != &UserRole::Admin {
             return Err(ApiError::forbidden("Admin access required"));
         }
         Ok(())
@@ -85,11 +85,15 @@ impl ProgramService {
 
     /// Returns true if the user is an admin OR is an accepted member of a
     /// program that grants container creation access.
+    ///
+    /// OAuth tokens are never treated as admin here — even if the underlying
+    /// account is an admin, the token must have an explicit program membership
+    /// granting container creation access.
     pub async fn user_can_create_container(
         &self,
         actor: &AuthenticatedUser,
     ) -> Result<bool, ApiError> {
-        if actor.role == UserRole::Admin {
+        if actor.effective_role() == &UserRole::Admin {
             return Ok(true);
         }
         self.repo.user_can_create_container(actor.user_id).await

@@ -35,6 +35,40 @@ pub struct AuthenticatedSession {
 }
 
 impl AuthenticatedUser {
+    /// Returns true when this request was authenticated via an OAuth application token.
+    pub fn is_oauth(&self) -> bool {
+        self.auth_method == AuthMethod::Oauth
+    }
+
+    /// Returns the role that should be used for access-control decisions.
+    ///
+    /// OAuth application tokens are intentionally downgraded to `User` even
+    /// when the underlying account holds the `Admin` role. This prevents an
+    /// OAuth app from gaining platform-wide admin access — it can only act on
+    /// the authorizing user's own resources.
+    pub fn effective_role(&self) -> &UserRole {
+        if self.is_oauth() {
+            &UserRole::User
+        } else {
+            &self.role
+        }
+    }
+
+    /// Returns an error when the request was authenticated via an OAuth
+    /// application token.
+    ///
+    /// Use this on endpoints that must never be reachable by OAuth apps
+    /// regardless of the user's role (e.g. token management, audit logs).
+    pub fn require_not_oauth(&self) -> Result<(), ApiError> {
+        if self.is_oauth() {
+            Err(ApiError::forbidden(
+                "This endpoint is not accessible via OAuth application tokens",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Ensures the current actor may access a tenant-owned resource.
     pub fn require_container_access(&self, owner_user_id: Uuid) -> Result<(), ApiError> {
         if self.role == UserRole::Admin || self.user_id == owner_user_id {

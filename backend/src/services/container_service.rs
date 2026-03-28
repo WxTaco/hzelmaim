@@ -317,13 +317,17 @@ impl ContainerService {
     }
 
     /// Checks that the actor has the required access level to a container.
+    ///
+    /// Admins bypass the ownership check unless the request is authenticated
+    /// via an OAuth application token, which is always restricted to the
+    /// authorizing user's own resources.
     async fn require_access(
         &self,
         actor: &AuthenticatedUser,
         container_id: Uuid,
         minimum: AccessLevel,
     ) -> Result<(), ApiError> {
-        if actor.role == crate::models::user::UserRole::Admin {
+        if actor.effective_role() == &crate::models::user::UserRole::Admin {
             return Ok(());
         }
         let has_access = self

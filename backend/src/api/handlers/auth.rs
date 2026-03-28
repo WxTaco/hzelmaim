@@ -242,11 +242,14 @@ pub struct CreateTokenResponse {
 }
 
 /// `POST /api/v1/tokens` — create a new personal access token.
+///
+/// Not accessible via OAuth application tokens.
 pub async fn create_token(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<CreateTokenRequest>,
 ) -> Result<Json<ApiResponse<CreateTokenResponse>>, ApiError> {
+    user.require_not_oauth()?;
     use crate::auth::resolver::PAT_PREFIX;
     use crate::models::api_token::ApiTokenRecord;
     use rand::RngCore;
@@ -284,21 +287,27 @@ pub async fn create_token(
 }
 
 /// `GET /api/v1/tokens` — list all PATs belonging to the authenticated user.
+///
+/// Not accessible via OAuth application tokens.
 pub async fn list_tokens(
     State(state): State<AppState>,
     user: AuthenticatedUser,
 ) -> Result<Json<ApiResponse<Vec<ApiTokenView>>>, ApiError> {
+    user.require_not_oauth()?;
     let records = state.api_token_repo.list_for_user(user.user_id).await?;
     let views: Vec<ApiTokenView> = records.into_iter().map(Into::into).collect();
     Ok(Json(ApiResponse::new(views)))
 }
 
 /// `DELETE /api/v1/tokens/:id` — revoke one of the authenticated user's PATs.
+///
+/// Not accessible via OAuth application tokens.
 pub async fn revoke_token(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Path(token_id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
+    user.require_not_oauth()?;
     let revoked = state
         .api_token_repo
         .revoke(token_id, user.user_id)

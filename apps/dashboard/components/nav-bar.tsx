@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Boxes, ScrollText, Settings, ShieldCheck, X } from "lucide-react"
+import { Boxes, Code2, ScrollText, Settings, ShieldCheck, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ interface NavItem {
 const BASE_NAV_ITEMS: readonly NavItem[] = [
   { label: "Containers", href: "/dashboard", icon: Boxes },
   { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
+  { label: "Developer", href: "/dashboard/developer", icon: Code2 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ] as const
 

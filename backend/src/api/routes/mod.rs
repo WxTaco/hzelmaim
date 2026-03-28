@@ -4,5 +4,6 @@ pub mod audit;
 pub mod auth;
 pub mod commands;
 pub mod containers;
+pub mod oauth;
 pub mod programs;
 pub mod ws;

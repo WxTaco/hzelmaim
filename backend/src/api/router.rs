@@ -9,6 +9,7 @@ use crate::{api::routes, app_state::AppState};
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .merge(routes::auth::router())
+        .merge(routes::oauth::router())
         .nest("/api/v1/containers", routes::containers::router())
         .nest("/api/v1/programs", routes::programs::router())
         .nest("/api/v1", routes::commands::router())

@@ -48,7 +48,15 @@ export function CallbackHandler() {
       // Swap text just after the checkmark finishes drawing.
       welcomeTimer = setTimeout(() => setShowWelcome(true), 900);
       // Hold the success screen briefly before navigating.
-      navTimer = setTimeout(() => router.replace("/dashboard"), 2500);
+      // If the user was mid-OAuth flow before being sent to login, bring
+      // them back to the consent page instead of the default dashboard.
+      const returnTo = localStorage.getItem("oauth_return_to");
+      if (returnTo) {
+        localStorage.removeItem("oauth_return_to");
+        navTimer = setTimeout(() => router.replace(returnTo), 2500);
+      } else {
+        navTimer = setTimeout(() => router.replace("/dashboard"), 2500);
+      }
     }, Math.max(MIN_SPINNER_MS - (Date.now() - mountedAt), MIN_SPINNER_MS));
 
     return () => {
