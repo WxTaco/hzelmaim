@@ -1,7 +1,7 @@
 //! OAuth 2.0 route definitions.
 
 use axum::{
-    routing::{delete, get, patch, post},
+    routing::{get, post},
     Router,
 };
 

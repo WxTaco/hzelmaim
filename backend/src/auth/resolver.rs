@@ -130,7 +130,7 @@ async fn resolve_jwt(token: &str, state: &AppState) -> Result<AuthenticatedUser,
         .ok_or_else(ApiError::unauthorized)?;
 
     // Dispatch on token type: OAuth tokens carry a client_id; OIDC tokens carry a session_id.
-    if let Some(client_id) = claims.client_id {
+    if let Some(_client_id) = claims.client_id {
         Ok(AuthenticatedUser {
             user_id: user.id,
             session_id: None,
