@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Maximize2, Minimize2, ExternalLink } from "lucide-react";
+import { Maximize2, Minimize2, ExternalLink, Plus, Minus } from "lucide-react";
 import { getAccessToken } from "@/lib/auth";
 
 /** Derives a WebSocket base URL from the REST API base URL. */
@@ -27,6 +27,10 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
   const wsRef = useRef<WebSocket | null>(null);
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fontSize, setFontSize] = useState(13);
+
+  const MIN_FONT_SIZE = 2;
+  const MAX_FONT_SIZE = 48;
 
   const sendResize = useCallback((cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -56,6 +60,18 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
       "popup,width=1200,height=720,menubar=no,toolbar=no,location=no"
     );
   }, [containerId]);
+
+  const changeFontSize = useCallback((delta: number) => {
+    setFontSize((prev) => {
+      const newSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, prev + delta));
+      if (termRef.current && fitRef.current) {
+        termRef.current.options.fontSize = newSize;
+        fitRef.current.fit();
+        sendResize(termRef.current.cols, termRef.current.rows);
+      }
+      return newSize;
+    });
+  }, [sendResize]);
 
   useEffect(() => {
     if (!termDivRef.current) return;
@@ -162,6 +178,28 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 shrink-0">
         <span className="text-xs text-zinc-500 font-mono select-none">terminal</span>
         <div className="flex items-center gap-1">
+          {/* Font size controls */}
+          <div className="flex items-center gap-0.5 mr-2 border-r border-white/10 pr-2">
+            <button
+              onClick={() => changeFontSize(-1)}
+              disabled={fontSize <= MIN_FONT_SIZE}
+              title="Decrease font size"
+              className="p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Minus className="size-3.5" />
+            </button>
+            <span className="text-xs text-zinc-400 font-mono w-8 text-center select-none">
+              {fontSize}px
+            </span>
+            <button
+              onClick={() => changeFontSize(1)}
+              disabled={fontSize >= MAX_FONT_SIZE}
+              title="Increase font size"
+              className="p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </div>
           <button
             onClick={popOut}
             title="Pop out into new window"
