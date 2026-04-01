@@ -37,7 +37,7 @@ interface NavItem {
 
 /** Base navigation items shown to all authenticated users. */
 const BASE_NAV_ITEMS: readonly NavItem[] = [
-  { label: "Containers", href: "/dashboard", icon: Boxes },
+  { label: "VPS", href: "/dashboard", icon: Boxes },
   { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
   { label: "Developer", href: "/dashboard/developer", icon: Code2 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },

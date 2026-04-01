@@ -193,7 +193,7 @@ export default function ContainerDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-4" />
-          Back to Containers
+          Back to VPS
         </button>
       </motion.div>
 
@@ -286,10 +286,10 @@ export default function ContainerDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Info className="size-4 text-muted-foreground" />
-                  Container Information
+                  VPS Information
                 </CardTitle>
                 <CardDescription>
-                  Basic details about this container instance
+                  Basic details about this VPS
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -316,7 +316,7 @@ export default function ContainerDetailPage() {
                   </div>
                   <div className="space-y-1">
                     <dt className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Container ID
+                      VPS ID
                     </dt>
                     <dd className="text-sm font-medium font-mono">
                       CT{container.proxmox_ctid}
@@ -379,7 +379,7 @@ export default function ContainerDetailPage() {
                       Network Statistics
                     </CardTitle>
                     <CardDescription>
-                      Total data transferred since container start
+                      Total data transferred since VPS start
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -412,7 +412,7 @@ export default function ContainerDetailPage() {
                   <p className="text-xs mt-1">
                     {container.state === "running"
                       ? "Metrics data is loading..."
-                      : "Start the container to view metrics"}
+                      : "Start the VPS to view metrics"}
                   </p>
                 </CardContent>
               </Card>
@@ -428,7 +428,7 @@ export default function ContainerDetailPage() {
                   Web Terminal
                 </CardTitle>
                 <CardDescription>
-                  Interactive shell access to the container
+                  Interactive shell access to the VPS
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -441,7 +441,7 @@ export default function ContainerDetailPage() {
                     <Terminal className="size-10 mx-auto mb-3 opacity-50" />
                     <p className="text-sm font-medium">Terminal unavailable</p>
                     <p className="text-xs mt-1">
-                      Start the container to access the terminal
+                      Start the VPS to access the terminal
                     </p>
                   </div>
                 )}

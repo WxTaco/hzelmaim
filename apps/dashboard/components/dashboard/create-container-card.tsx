@@ -50,7 +50,7 @@ export function CreateContainerCard({ onCreateClick }: CreateContainerCardProps)
       {/* Text content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">
-          Add a new container
+          Add a new VPS
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">
           Provision a new development environment

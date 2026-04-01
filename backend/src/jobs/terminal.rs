@@ -20,6 +20,10 @@ pub enum TerminalStreamEvent {
     Resized { cols: u16, rows: u16 },
     Closed,
     Error { message: String },
+    /// A file upload completed successfully.
+    FileUploaded { path: String },
+    /// A file upload failed.
+    FileUploadError { path: String, message: String },
 }
 
 /// Messages sent from the frontend to the backend over WebSocket.
@@ -30,4 +34,8 @@ pub enum TerminalClientMsg {
     Input { data: String },
     /// Terminal resize event.
     Resize { cols: u16, rows: u16 },
+    /// Upload a file into the container. `data` is the file content encoded as
+    /// standard Base64. `path` is the absolute destination path inside the
+    /// container (e.g. `/root/myfile.txt`).
+    FileUpload { path: String, data: String },
 }

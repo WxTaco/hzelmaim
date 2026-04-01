@@ -218,7 +218,7 @@ export default function DashboardPage() {
           <ServerCrash className="size-8 text-destructive" />
         </div>
         <div>
-          <p className="text-lg font-semibold">Failed to load containers</p>
+          <p className="text-lg font-semibold">Failed to load VPS</p>
           <p className="text-sm text-muted-foreground mt-1">{error}</p>
         </div>
         <Button 

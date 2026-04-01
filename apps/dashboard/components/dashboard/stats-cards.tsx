@@ -62,7 +62,7 @@ function StatCard({ label, value, icon, colorClass, glowClass, delay }: StatCard
 export function StatsCards({ total, running, stopped, failed }: StatsCardsProps) {
   const stats = [
     {
-      label: "Total Containers",
+      label: "Total VPS",
       value: total,
       icon: <Box className="size-5 text-white" />,
       colorClass: "from-primary/80 to-primary",

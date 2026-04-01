@@ -1,9 +1,33 @@
 const ACCESS_TOKEN_KEY = "hzel_access_token";
 const REFRESH_TOKEN_KEY = "hzel_refresh_token";
 
+/**
+ * Mirrors the access token into a browser cookie so that the server-side
+ * proxy (proxy.ts) can read it for authentication-based redirects.
+ * The cookie is NOT HttpOnly (set from JS) and carries the same expiry as
+ * the JWT's `exp` claim so it persists across browser sessions.
+ */
+function setAuthCookie(accessToken: string) {
+  let cookieParts = `${ACCESS_TOKEN_KEY}=${accessToken}; path=/; SameSite=Lax`;
+  try {
+    const payload = JSON.parse(atob(accessToken.split(".")[1]));
+    if (typeof payload.exp === "number") {
+      cookieParts += `; expires=${new Date(payload.exp * 1000).toUTCString()}`;
+    }
+  } catch {
+    // Fall back to a session cookie if the JWT payload cannot be decoded.
+  }
+  document.cookie = cookieParts;
+}
+
+function clearAuthCookie() {
+  document.cookie = `${ACCESS_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
 export function storeTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  setAuthCookie(accessToken);
 }
 
 export function getAccessToken(): string | null {
@@ -17,6 +41,7 @@ export function getRefreshToken(): string | null {
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  clearAuthCookie();
 }
 
 /** Decoded payload of our access token. */

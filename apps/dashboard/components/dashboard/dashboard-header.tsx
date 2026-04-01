@@ -37,12 +37,12 @@ export function DashboardHeader({ containerCount }: DashboardHeaderProps) {
       transition={{ duration: 0.4, ease: EASE }}
     >
       <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-        Containers
+        VPS
       </h1>
       <p className="text-sm text-muted-foreground mt-1">
         {containerCount === 0
-          ? "Get started by creating your first container"
-          : `Manage your ${containerCount} container${containerCount !== 1 ? "s" : ""}`}
+          ? "Get started by creating your first VPS"
+          : `Manage your ${containerCount} VPS`}
       </p>
     </motion.header>
   );

@@ -10,7 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-sans);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,36 +50,36 @@
 }
 
 :root {
-  /* Pure black background for premium corporate feel */
-  --background: #050506;
-  --foreground: #fafafa;
-  
-  /* Elevated card surfaces */
-  --card: #0a0a0b;
-  --card-foreground: #fafafa;
-  --popover: #0a0a0b;
-  --popover-foreground: #fafafa;
-  
+  /* Deep space background with a slight cool tint */
+  --background: #060609;
+  --foreground: #f4f4f8;
+
+  /* Elevated card surfaces — clearly separated from background */
+  --card: #0f0f16;
+  --card-foreground: #f4f4f8;
+  --popover: #0f0f16;
+  --popover-foreground: #f4f4f8;
+
   /* Brand blue primary - #00a4ff */
   --primary: #00a4ff;
-  --primary-foreground: #050506;
-  
-  /* Neutral zinc tones */
-  --secondary: #111113;
-  --secondary-foreground: #fafafa;
-  --muted: #111113;
-  --muted-foreground: #a1a1aa;
-  
-  /* Accent for highlights */
-  --accent: #18181b;
-  --accent-foreground: #fafafa;
-  
+  --primary-foreground: #060609;
+
+  /* Neutral tones with a cooler cast to harmonize with brand blue */
+  --secondary: #13131c;
+  --secondary-foreground: #f4f4f8;
+  --muted: #13131c;
+  --muted-foreground: #8f8fa8;
+
+  /* Accent for highlights — slightly lifted from card */
+  --accent: #1a1a28;
+  --accent-foreground: #f4f4f8;
+
   /* Semantic colors */
-  --destructive: #dc2626;
-  
-  /* Refined borders */
-  --border: #27272a;
-  --input: #27272a;
+  --destructive: #ef4444;
+
+  /* Cooler-toned borders that harmonize with brand blue */
+  --border: #1e1e30;
+  --input: #1e1e30;
   --ring: #00a4ff;
   
   /* Chart colors - brand blue spectrum */
@@ -92,13 +92,13 @@
   --radius: 0.5rem;
   
   /* Sidebar theming */
-  --sidebar: #080809;
-  --sidebar-foreground: #fafafa;
+  --sidebar: #08080e;
+  --sidebar-foreground: #f4f4f8;
   --sidebar-primary: #00a4ff;
-  --sidebar-primary-foreground: #050506;
-  --sidebar-accent: #111113;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #27272a;
+  --sidebar-primary-foreground: #060609;
+  --sidebar-accent: #13131c;
+  --sidebar-accent-foreground: #f4f4f8;
+  --sidebar-border: #1e1e30;
   --sidebar-ring: #00a4ff;
   
   /* Status colors */
@@ -125,40 +125,68 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
 }
 
 @layer utilities {
+  /* Prominent glow for hero elements and CTA buttons */
   .glow-primary {
-    box-shadow: 0 0 60px rgba(0, 164, 255, 0.12), 0 0 100px rgba(0, 164, 255, 0.06);
+    box-shadow: 0 0 40px rgba(0, 164, 255, 0.22), 0 0 80px rgba(0, 164, 255, 0.10);
   }
-  
+
+  /* Subtle glow for secondary elements */
   .glow-primary-sm {
-    box-shadow: 0 0 30px rgba(0, 164, 255, 0.1);
+    box-shadow: 0 0 24px rgba(0, 164, 255, 0.18);
   }
-  
+
+  /* Inset border glow for highlighted containers */
   .border-glow {
-    box-shadow: inset 0 0 0 1px rgba(0, 164, 255, 0.1), 0 0 20px rgba(0, 164, 255, 0.05);
+    box-shadow: inset 0 0 0 1px rgba(0, 164, 255, 0.18), 0 0 32px rgba(0, 164, 255, 0.10);
   }
-  
+
+  /* Directional gradient: highlight → brand → deep — actually visible now */
   .text-gradient {
-    background: linear-gradient(135deg, #00a4ff 0%, #38bdf8 50%, #00a4ff 100%);
+    background: linear-gradient(135deg, #7dd3fc 0%, #00a4ff 45%, #006fd6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
+  /* Elevated card with visible top-edge light */
   .card-elevated {
-    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid rgba(255,255,255,0.09);
   }
-  
+
+  /* Card hover: lift + border bloom */
   .card-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
   }
-  
+
   .card-hover:hover {
-    border-color: rgba(0, 164, 255, 0.3);
-    box-shadow: 0 0 30px rgba(0, 164, 255, 0.08);
-    transform: translateY(-2px);
+    border-color: rgba(0, 164, 255, 0.35);
+    box-shadow: 0 4px 32px rgba(0, 164, 255, 0.10), 0 1px 8px rgba(0, 0, 0, 0.4);
+    transform: translateY(-3px);
+  }
+
+  /* Navbar scroll shadow — applied via JS when scrolled */
+  .nav-scrolled {
+    border-bottom-color: rgba(30, 30, 48, 0.8);
+    box-shadow: 0 1px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Hero grid overlay — perceptible but subtle */
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(0, 164, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 164, 255, 0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Stat number — large display figures */
+  .stat-value {
+    @apply font-heading text-3xl font-bold tracking-tight sm:text-4xl;
   }
 }

@@ -3,6 +3,7 @@
 
 use std::sync::Arc;
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use russh::keys::{decode_secret_key, Certificate};
 use russh::{client, Channel, ChannelMsg, Disconnect};
 use tokio::sync::mpsc;
@@ -159,7 +160,9 @@ impl TerminalService {
         info!(ctid, %user_id, "terminal session opened");
 
         // 6. Bridge loop — shuttle data between WS and SSH.
-        Self::bridge(channel, client_rx, server_tx).await;
+        // Pass a reference to `session` so the bridge can open additional
+        // SSH exec channels for file uploads.
+        Self::bridge(&session, channel, client_rx, server_tx).await;
 
         let _ = session.disconnect(Disconnect::ByApplication, "", "").await;
 
@@ -169,7 +172,11 @@ impl TerminalService {
     /// Internal bridge loop: reads from both the SSH channel and the WS
     /// client channel, forwarding data in both directions until one side
     /// closes.
+    ///
+    /// `session` is borrowed so the bridge can open additional SSH exec
+    /// channels for file uploads without establishing a new SSH connection.
     async fn bridge(
+        session: &client::Handle<SshHandler>,
         mut channel: Channel<client::Msg>,
         mut client_rx: mpsc::Receiver<TerminalClientMsg>,
         server_tx: mpsc::Sender<TerminalStreamEvent>,
@@ -211,6 +218,13 @@ impl TerminalService {
                                 warn!("SSH resize error: {e}");
                             }
                         }
+                        Some(TerminalClientMsg::FileUpload { path, data }) => {
+                            let event = match Self::upload_file(session, &path, &data).await {
+                                Ok(()) => TerminalStreamEvent::FileUploaded { path },
+                                Err(msg) => TerminalStreamEvent::FileUploadError { path, message: msg },
+                            };
+                            let _ = server_tx.send(event).await;
+                        }
                         None => {
                             // WS closed — send EOF to SSH and break.
                             let _ = channel.eof().await;
@@ -219,6 +233,79 @@ impl TerminalService {
                     }
                 }
             }
+        }
+    }
+
+    /// Opens a fresh SSH exec channel on the existing session and writes
+    /// `data_b64` (standard Base64) to `path` inside the container.
+    ///
+    /// The destination directory must already exist. Paths must not contain
+    /// null bytes or single quotes.
+    async fn upload_file(
+        session: &client::Handle<SshHandler>,
+        path: &str,
+        data_b64: &str,
+    ) -> Result<(), String> {
+        // ── Validate path ────────────────────────────────────────────────
+        if path.is_empty() {
+            return Err("path must not be empty".to_string());
+        }
+        if path.len() > 4096 {
+            return Err("path is too long".to_string());
+        }
+        if path.contains('\0') || path.contains('\'') {
+            return Err("path contains disallowed characters (null byte or single quote)".to_string());
+        }
+
+        // ── Decode Base64 payload ────────────────────────────────────────
+        let bytes = BASE64
+            .decode(data_b64)
+            .map_err(|e| format!("invalid Base64 data: {e}"))?;
+
+        const MAX_BYTES: usize = 10 * 1024 * 1024; // 10 MiB
+        if bytes.len() > MAX_BYTES {
+            return Err(format!(
+                "file too large ({} bytes); maximum is {} bytes",
+                bytes.len(),
+                MAX_BYTES,
+            ));
+        }
+
+        // ── Open a new exec channel on the existing SSH session ──────────
+        let mut upload_ch = session
+            .channel_open_session()
+            .await
+            .map_err(|e| format!("failed to open upload channel: {e}"))?;
+
+        // `cat > 'path'` — safe because path was validated above.
+        let cmd = format!("cat > '{path}'");
+        upload_ch
+            .exec(true, cmd)
+            .await
+            .map_err(|e| format!("exec failed: {e}"))?;
+
+        // Write file bytes then signal EOF so cat knows the input is done.
+        upload_ch
+            .data(bytes.as_slice())
+            .await
+            .map_err(|e| format!("data write failed: {e}"))?;
+
+        upload_ch
+            .eof()
+            .await
+            .map_err(|e| format!("eof failed: {e}"))?;
+
+        // Wait for the remote process to exit.
+        let mut exit_code: Option<u32> = None;
+        while let Some(msg) = upload_ch.wait().await {
+            if let ChannelMsg::ExitStatus { exit_status } = msg {
+                exit_code = Some(exit_status);
+            }
+        }
+
+        match exit_code {
+            Some(0) | None => Ok(()),
+            Some(code) => Err(format!("cat exited with status {code}")),
         }
     }
 }

@@ -347,9 +347,9 @@ export default function ProgramDetailPage() {
               <CardContent>
                 <div className="flex items-center justify-between py-2">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">Container Creation</p>
+                    <p className="text-sm font-medium">VPS Creation</p>
                     <p className="text-xs text-muted-foreground">
-                      Allow accepted members to provision LXC containers
+                      Allow accepted members to provision VPS
                     </p>
                   </div>
                   <Button

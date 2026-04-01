@@ -18,20 +18,20 @@ type ActionType = "start" | "stop" | "restart" | null;
 
 const actionConfig = {
   start: {
-    title: "Start Container",
-    description: "Are you sure you want to start this container? It will begin consuming resources.",
+    title: "Start VPS",
+    description: "Are you sure you want to start this VPS? It will begin consuming resources.",
     confirmLabel: "Start",
     variant: "default" as const,
   },
   stop: {
-    title: "Stop Container",
-    description: "Are you sure you want to stop this container? Any unsaved work may be lost.",
+    title: "Stop VPS",
+    description: "Are you sure you want to stop this VPS? Any unsaved work may be lost.",
     confirmLabel: "Stop",
     variant: "destructive" as const,
   },
   restart: {
-    title: "Restart Container",
-    description: "Are you sure you want to restart this container? It will be briefly unavailable during the restart.",
+    title: "Restart VPS",
+    description: "Are you sure you want to restart this VPS? It will be briefly unavailable during the restart.",
     confirmLabel: "Restart",
     variant: "default" as const,
   },
@@ -78,14 +78,14 @@ export function ContainerActions({
 
   return (
     <>
-      <div className="flex items-center gap-1" role="group" aria-label="Container actions">
+      <div className="flex items-center gap-1" role="group" aria-label="VPS actions">
         {state === "stopped" && (
           <Button
             variant="ghost"
             size="icon-sm"
             disabled={busy}
             onClick={() => handleActionClick("start")}
-            aria-label="Start container"
+            aria-label="Start VPS"
             className="hover:bg-emerald-500/10 hover:text-emerald-500"
           >
             {busy ? <Loader2 className="animate-spin" /> : <Play className="text-emerald-500" />}
@@ -98,7 +98,7 @@ export function ContainerActions({
               size="icon-sm"
               disabled={busy}
               onClick={() => handleActionClick("restart")}
-              aria-label="Restart container"
+              aria-label="Restart VPS"
               className="hover:bg-blue-500/10 hover:text-blue-400"
             >
               {busy ? (
@@ -112,7 +112,7 @@ export function ContainerActions({
               size="icon-sm"
               disabled={busy}
               onClick={() => handleActionClick("stop")}
-              aria-label="Stop container"
+              aria-label="Stop VPS"
               className="hover:bg-destructive/10 hover:text-destructive"
             >
               {busy ? (
@@ -129,7 +129,7 @@ export function ContainerActions({
             size="icon-sm"
             disabled={busy}
             onClick={() => handleActionClick("restart")}
-            aria-label="Retry container"
+            aria-label="Retry VPS"
             className="hover:bg-primary/10 hover:text-primary"
           >
             {busy ? <Loader2 className="animate-spin" /> : <RotateCcw className="text-muted-foreground" />}
@@ -145,7 +145,7 @@ export function ContainerActions({
           title={config.title}
           description={
             containerName
-              ? `${config.description.replace("this container", `"${containerName}"`)}`
+              ? `${config.description.replace("this VPS", `"${containerName}"`)}`
               : config.description
           }
           confirmLabel={config.confirmLabel}

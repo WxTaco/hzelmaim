@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Maximize2, Minimize2, ExternalLink, Plus, Minus } from "lucide-react";
+import { Maximize2, Minimize2, ExternalLink, Plus, Minus, Upload } from "lucide-react";
 import { getAccessToken } from "@/lib/auth";
 
 /** Derives a WebSocket base URL from the REST API base URL. */
@@ -26,8 +26,11 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
   const termRef = useRef<import("@xterm/xterm").Terminal | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fontSize, setFontSize] = useState(13);
+
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MiB — must match backend
 
   const MIN_FONT_SIZE = 2;
   const MAX_FONT_SIZE = 48;
@@ -72,6 +75,31 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
       return newSize;
     });
   }, [sendResize]);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset so the same file can be re-selected after an error.
+    e.target.value = "";
+    if (!file || wsRef.current?.readyState !== WebSocket.OPEN) return;
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      termRef.current?.write(
+        `\r\n\x1b[31mUpload error: file too large (${(file.size / 1024 / 1024).toFixed(1)} MiB, max 10 MiB)\x1b[0m\r\n`
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // dataUrl is "data:<mime>;base64,<b64data>" — strip the prefix.
+      const b64 = dataUrl.split(",")[1];
+      const path = `/root/${file.name}`;
+      termRef.current?.write(`\r\n\x1b[2mUploading ${file.name} → ${path}…\x1b[0m\r\n`);
+      wsRef.current?.send(JSON.stringify({ type: "file_upload", path, data: b64 }));
+    };
+    reader.readAsDataURL(file);
+  }, [MAX_UPLOAD_BYTES]);
 
   useEffect(() => {
     if (!termDivRef.current) return;
@@ -121,6 +149,10 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
           if (msg.type === "output") term.write(msg.data as string);
           else if (msg.type === "error") term.write(`\r\n\x1b[31mError: ${msg.message}\x1b[0m\r\n`);
           else if (msg.type === "closed") term.write("\r\n\x1b[2m[session closed]\x1b[0m\r\n");
+          else if (msg.type === "file_uploaded")
+            term.write(`\r\n\x1b[32mUploaded → ${msg.path as string}\x1b[0m\r\n`);
+          else if (msg.type === "file_upload_error")
+            term.write(`\r\n\x1b[31mUpload failed (${msg.path as string}): ${msg.message as string}\x1b[0m\r\n`);
         } catch {
           // ignore malformed frames
         }
@@ -174,6 +206,13 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
       className="flex flex-col rounded-lg overflow-hidden bg-[#09090b] ring-1 ring-foreground/10"
       style={isFullscreen ? { height: "100vh" } : {}}
     >
+      {/* Hidden file input — triggered by the upload button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 shrink-0">
         <span className="text-xs text-zinc-500 font-mono select-none">terminal</span>
@@ -200,6 +239,13 @@ export function WebTerminal({ containerId }: WebTerminalProps) {
               <Plus className="size-3.5" />
             </button>
           </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload file to /root/"
+            className="p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors"
+          >
+            <Upload className="size-3.5" />
+          </button>
           <button
             onClick={popOut}
             title="Pop out into new window"

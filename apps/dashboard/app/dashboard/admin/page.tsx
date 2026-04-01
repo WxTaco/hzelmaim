@@ -217,7 +217,7 @@ export default function AdminPage() {
                       onChange={(e) => setNewCanCreate(e.target.checked)}
                       className="size-4 rounded border-border accent-primary"
                     />
-                    <span className="text-sm text-foreground">Allow members to create containers</span>
+                    <span className="text-sm text-foreground">Allow members to create VPS</span>
                   </label>
                   {createError && (
                     <p className="text-xs text-destructive" role="alert">{createError}</p>

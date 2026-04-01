@@ -152,9 +152,9 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create New Container</DialogTitle>
+          <DialogTitle>Create New VPS</DialogTitle>
           <DialogDescription>
-            Configure your container resources. You can adjust these later.
+            Configure your VPS resources. You can adjust these later.
           </DialogDescription>
         </DialogHeader>
         
@@ -230,7 +230,7 @@ export function CreateContainerDialog({ open, onOpenChange, onSubmit }: CreateCo
             </Button>
             <Button type="submit" disabled={creating} className="gap-2">
               {creating && <Loader2 className="size-4 animate-spin" />}
-              {creating ? "Creating..." : "Create Container"}
+              {creating ? "Creating..." : "Create VPS"}
             </Button>
           </DialogFooter>
         </form>

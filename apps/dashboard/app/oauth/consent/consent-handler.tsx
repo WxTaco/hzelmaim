@@ -212,8 +212,8 @@ function CardBody({
         <ul className="space-y-2 mb-5">
           {[
             "Read your profile (name and email)",
-            "View and manage your containers",
-            "Start, stop, and restart containers",
+            "View and manage your VPS",
+            "Start, stop, and restart VPS",
             "Execute commands and open terminals",
             "View your program memberships and permissions",
           ].map((permission) => (
