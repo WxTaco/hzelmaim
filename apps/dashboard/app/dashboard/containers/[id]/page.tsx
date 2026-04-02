@@ -209,9 +209,6 @@ export default function ContainerDetailPage() {
             <h1 className="text-xl font-semibold tracking-tight truncate">
               {container.name}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {container.node_name} · CT{container.proxmox_ctid}
-            </p>
           </div>
           <StateBadge state={container.state} />
         </div>
@@ -296,12 +293,6 @@ export default function ContainerDetailPage() {
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <dt className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Name
-                    </dt>
-                    <dd className="text-sm font-medium">{container.name}</dd>
-                  </div>
-                  <div className="space-y-1">
-                    <dt className="text-xs text-muted-foreground uppercase tracking-wide">
                       Status
                     </dt>
                     <dd>
@@ -316,14 +307,6 @@ export default function ContainerDetailPage() {
                   </div>
                   <div className="space-y-1">
                     <dt className="text-xs text-muted-foreground uppercase tracking-wide">
-                      VPS ID
-                    </dt>
-                    <dd className="text-sm font-medium font-mono">
-                      CT{container.proxmox_ctid}
-                    </dd>
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <dt className="text-xs text-muted-foreground uppercase tracking-wide">
                       Created
                     </dt>
                     <dd className="text-sm font-medium">
@@ -333,6 +316,14 @@ export default function ContainerDetailPage() {
                       })}
                     </dd>
                   </div>
+                  <details className="space-y-1 text-xs">
+                    <summary className="text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground transition-colors">
+                      Technical Details
+                    </summary>
+                    <dd className="text-sm font-medium font-mono mt-1">
+                      CT{container.proxmox_ctid}
+                    </dd>
+                  </details>
                 </dl>
               </CardContent>
             </Card>

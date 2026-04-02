@@ -26,36 +26,24 @@ interface ContainerCardProps {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function StateBadge({ state }: { state: ContainerRecord["state"] }) {
+/**
+ * Minimal state indicator - just the colored dot for visual status
+ * The border color already indicates state, so this is supplementary
+ */
+function StateIndicator({ state }: { state: ContainerRecord["state"] }) {
   const cfg = {
-    running: {
-      classes: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/30",
-      pulse: true,
-    },
-    stopped: {
-      classes: "bg-muted text-muted-foreground ring-foreground/10",
-      pulse: false,
-    },
-    provisioning: {
-      classes: "bg-blue-500/10 text-blue-400 ring-blue-500/30",
-      pulse: true,
-    },
-    failed: {
-      classes: "bg-destructive/10 text-destructive ring-destructive/30",
-      pulse: false,
-    },
-  }[state] ?? { classes: "bg-muted text-muted-foreground ring-foreground/10", pulse: false };
+    running: "bg-emerald-500",
+    stopped: "bg-muted-foreground/50",
+    provisioning: "bg-blue-400 animate-pulse",
+    failed: "bg-destructive",
+  }[state] ?? "bg-muted-foreground/50";
 
   return (
-    <span className={cn(
-      "relative inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset shrink-0",
-      cfg.classes
-    )}>
-      {cfg.pulse && (
-        <span className="absolute -left-0.5 top-1/2 -translate-y-1/2 size-1.5 rounded-full bg-current animate-pulse" />
-      )}
-      <span className={cfg.pulse ? "ml-1.5" : ""}>{state}</span>
-    </span>
+    <span 
+      className={cn("size-2 rounded-full shrink-0", cfg)}
+      role="status"
+      aria-label={`Status: ${state}`}
+    />
   );
 }
 
@@ -73,41 +61,33 @@ export function ContainerCard({ container, index, busy, onAction }: ContainerCar
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 + index * 0.05, duration: 0.4, ease: EASE }}
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-4 sm:py-3",
+        "flex items-center gap-4 rounded-xl bg-card ring-1 ring-foreground/8 px-4 py-3",
         "border-l-4 transition-all duration-200",
         "hover:ring-foreground/15 hover:translate-y-[-1px] hover:shadow-lg hover:shadow-black/10",
         borderColorMap[container.state]
       )}
     >
-      {/* Main content area */}
+      {/* State indicator dot */}
+      <StateIndicator state={container.state} />
+
+      {/* Main content area - simplified */}
       <Link href={`/dashboard/containers/${container.id}`} className="min-w-0 flex-1 group/link">
-        <div className="flex items-center gap-2 sm:gap-0 sm:flex-col sm:items-start">
-          <p className="text-sm font-semibold truncate group-hover/link:text-primary transition-colors">
-            {container.name}
-          </p>
-          <StateBadge state={container.state} />
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {container.node_name} · CT{container.proxmox_ctid}
+        <p className="text-sm font-semibold truncate group-hover/link:text-primary transition-colors">
+          {container.name}
+        </p>
+        <p className="text-xs text-muted-foreground capitalize">
+          {container.state}
         </p>
       </Link>
 
-      {/* Actions row - full width on mobile */}
-      <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
-        <span className="text-xs text-muted-foreground sm:hidden">Actions</span>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:block">
-            <StateBadge state={container.state} />
-          </div>
-          <ContainerActions
-            containerId={container.id}
-            containerName={container.name}
-            state={container.state}
-            busy={busy}
-            onAction={onAction}
-          />
-        </div>
-      </div>
+      {/* Actions - streamlined */}
+      <ContainerActions
+        containerId={container.id}
+        containerName={container.name}
+        state={container.state}
+        busy={busy}
+        onAction={onAction}
+      />
     </motion.div>
   );
 }
