@@ -2,48 +2,29 @@
 
 import { motion } from "framer-motion";
 
-/**
- * Props for the DashboardHeader component.
- */
 interface DashboardHeaderProps {
-  /** Number of containers to display in subtitle */
   containerCount: number;
 }
 
-/** Animation easing curve for smooth transitions */
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
- * DashboardHeader - Page header for the container management dashboard.
- * 
- * Displays the page title and a dynamic subtitle showing the current
- * container count. The create functionality has been moved to the
- * CreateContainerCard component which appears in the container list.
- * 
- * @param props - Component props
- * @param props.containerCount - Number of existing containers
- * 
- * @example
- * ```tsx
- * <DashboardHeader containerCount={containers.length} />
- * ```
+ * DashboardHeader - Minimal page header for the VPS dashboard.
  */
 export function DashboardHeader({ containerCount }: DashboardHeaderProps) {
   return (
     <motion.header
       className="mb-6"
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: EASE }}
+      transition={{ duration: 0.35, ease: EASE }}
     >
-      <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-        VPS
-      </h1>
-      <p className="text-sm text-muted-foreground mt-1">
-        {containerCount === 0
-          ? "Get started by creating your first VPS"
-          : `Manage your ${containerCount} VPS`}
-      </p>
+      <h1 className="text-xl font-semibold tracking-tight">VPS</h1>
+      {containerCount === 0 && (
+        <p className="text-sm text-muted-foreground mt-1">
+          Get started by creating your first VPS
+        </p>
+      )}
     </motion.header>
   );
 }
