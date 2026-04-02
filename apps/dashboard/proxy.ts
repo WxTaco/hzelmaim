@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Must match the cookie name written by storeTokens() in lib/auth.ts.
+// Must match the cookie names written by storeTokens() in lib/auth.ts.
 const AUTH_COOKIE = "hzel_access_token";
+const REFRESH_COOKIE = "hzel_refresh_token";
 
 /**
  * Validates a raw JWT string by checking the `exp` claim.
@@ -22,8 +23,15 @@ function isValidToken(token: string): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get(AUTH_COOKIE)?.value;
-  const authenticated = token ? isValidToken(token) : false;
+  const accessToken = request.cookies.get(AUTH_COOKIE)?.value;
+  const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
+
+  // A session is considered active if the access token is still valid OR if a
+  // valid refresh token exists (the client will silently exchange it on the
+  // next API call).
+  const authenticated =
+    (accessToken ? isValidToken(accessToken) : false) ||
+    (refreshToken ? isValidToken(refreshToken) : false);
 
   // Authenticated users visiting /login are sent straight to the dashboard.
   if (pathname === "/login" && authenticated) {
