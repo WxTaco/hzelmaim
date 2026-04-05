@@ -9,3 +9,4 @@ keys/
 .next/
 oauth-example/
 .open-next
+.wrangler

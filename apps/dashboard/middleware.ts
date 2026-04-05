@@ -7,21 +7,22 @@ const REFRESH_COOKIE = "hzel_refresh_token";
 
 /**
  * Validates a raw JWT string by checking the `exp` claim.
- * Runs entirely in the Node.js runtime — no localStorage, no DOM.
+ * Uses only Web APIs so it runs on the Edge runtime.
  */
 function isValidToken(token: string): boolean {
   try {
     // JWT is three base64url segments separated by dots; the payload is [1].
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64").toString("utf-8")
-    );
+    // Use atob() (Web API) instead of Buffer (Node.js-only) so this runs on
+    // the Edge runtime. base64url uses - and _ instead of + and /.
+    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(base64));
     return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
   } catch {
     return false;
   }
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get(AUTH_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
@@ -38,9 +39,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Unauthenticated users trying to access any /dashboard/* route are sent
-  // to the login page. Marketing pages (/, /learn, etc.) are unaffected.
-  if (pathname.startsWith("/dashboard") && !authenticated) {
+  // Unauthenticated users trying to access any /dashboard/* or /terminal/*
+  // route are sent to the login page. Marketing pages (/, /learn, etc.) are
+  // unaffected.
+  if (
+    (pathname.startsWith("/dashboard") || pathname.startsWith("/terminal")) &&
+    !authenticated
+  ) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -50,5 +55,5 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Only run on /login and every /dashboard route (including /dashboard itself
   // since :path* allows zero segments).
-  matcher: ["/login", "/dashboard/:path*"],
+  matcher: ["/login", "/dashboard/:path*", "/terminal/:path*"],
 };
