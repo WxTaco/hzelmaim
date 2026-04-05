@@ -28,7 +28,7 @@ pub struct OAuthApplication {
 
 /// Public subset of an OAuth application returned to the owner.
 /// Never includes the secret hash.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct OAuthApplicationView {
     pub id: Uuid,
     pub name: String,
@@ -56,7 +56,7 @@ impl From<OAuthApplication> for OAuthApplicationView {
 }
 
 /// Minimal public view returned to unauthenticated consent-page requests.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct OAuthAppPublicView {
     pub client_id: Uuid,
     pub name: String,

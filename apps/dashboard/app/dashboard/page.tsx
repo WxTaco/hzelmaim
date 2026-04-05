@@ -11,7 +11,12 @@ import { StatsCards } from "@/components/dashboard/stats-cards"
 import { ContainerList } from "@/components/dashboard/container-list"
 import { CreateContainerDialog, type CreateContainerData } from "@/components/dashboard/create-container-dialog"
 import { PasswordBanner } from "@/components/dashboard/password-banner"
-import { InvitationModal, type PendingInvitation } from "@/components/dashboard/invitation-modal"
+import {
+  InvitationModal,
+  ContainerSharingModal,
+  type PendingInvitation,
+  type PendingContainerSharingInvitation,
+} from "@/components/dashboard/invitation-modal"
 import type { ContainerRecord } from "@/components/dashboard/container-card"
 
 /**
@@ -89,6 +94,9 @@ export default function DashboardPage() {
   /** Pending program invitations shown as a modal on load */
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
 
+  /** Pending container-sharing invitations shown after program invitations are resolved */
+  const [pendingContainerInvitations, setPendingContainerInvitations] = useState<PendingContainerSharingInvitation[]>([])
+
   /** Whether the current user is allowed to create containers */
   const [canCreate, setCanCreate] = useState(false)
 
@@ -110,13 +118,15 @@ export default function DashboardPage() {
    */
   const load = useCallback(async () => {
     try {
-      const [containersRes, invitationsRes, permsRes] = await Promise.all([
+      const [containersRes, invitationsRes, containerInvitationsRes, permsRes] = await Promise.all([
         apiFetch<{ data: ContainerRecord[] }>("/api/v1/containers"),
         apiFetch<{ data: PendingInvitation[] }>("/api/v1/programs/invitations/pending").catch(() => ({ data: [] as PendingInvitation[] })),
+        apiFetch<{ data: PendingContainerSharingInvitation[] }>("/api/v1/containers/invitations/pending").catch(() => ({ data: [] as PendingContainerSharingInvitation[] })),
         apiFetch<{ data: { can_create_containers: boolean } }>("/api/v1/programs/permissions/me").catch(() => ({ data: { can_create_containers: false } })),
       ])
       setContainers(containersRes.data)
       setPendingInvitations(invitationsRes.data)
+      setPendingContainerInvitations(containerInvitationsRes.data)
       setCanCreate(permsRes.data.can_create_containers)
       setError(null)
     } catch (e) {
@@ -281,11 +291,19 @@ export default function DashboardPage() {
         onSubmit={handleCreate}
       />
 
-      {/* Pending program invitation modal */}
+      {/* Pending program invitation modal — shown first */}
       {pendingInvitations.length > 0 && (
         <InvitationModal
           invitations={pendingInvitations}
           onAllResponded={() => setPendingInvitations([])}
+        />
+      )}
+
+      {/* Pending container-sharing invitation modal — shown after all program invitations are resolved */}
+      {pendingInvitations.length === 0 && pendingContainerInvitations.length > 0 && (
+        <ContainerSharingModal
+          invitations={pendingContainerInvitations}
+          onAllResponded={() => setPendingContainerInvitations([])}
         />
       )}
     </div>

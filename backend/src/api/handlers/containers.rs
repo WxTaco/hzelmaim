@@ -11,7 +11,10 @@ use crate::{
     api::response::ApiResponse,
     app_state::AppState,
     auth::{context::AuthenticatedUser, csrf::CsrfProtected},
-    models::container::ContainerRecord,
+    models::container::{
+        ContainerInvitation, ContainerRecord, ContainerWithPermissions,
+        PendingContainerInvitationView,
+    },
     proxmox::types::{ContainerMetrics, CreateContainerRequest, ResourceLimits},
     utils::error::ApiError,
 };
@@ -32,7 +35,7 @@ pub struct ApiCreateContainerRequest {
     get,
     path = "/api/v1/containers",
     responses(
-        (status = 200, description = "List of containers", body = inline(ApiResponse<Vec<ContainerRecord>>)),
+        (status = 200, description = "List of containers", body = inline(ApiResponse<Vec<ContainerWithPermissions>>)),
         (status = 401, description = "Unauthorized"),
     ),
     security(("bearer_auth" = [])),
@@ -41,7 +44,7 @@ pub struct ApiCreateContainerRequest {
 pub async fn list(
     State(state): State<AppState>,
     actor: AuthenticatedUser,
-) -> Result<Json<ApiResponse<Vec<ContainerRecord>>>, ApiError> {
+) -> Result<Json<ApiResponse<Vec<ContainerWithPermissions>>>, ApiError> {
     Ok(Json(ApiResponse::new(
         state.container_service.list_for_user(&actor).await?,
     )))
@@ -99,7 +102,7 @@ pub async fn create(_csrf: CsrfProtected, State(state): State<AppState>, actor: 
         ("container_id" = uuid::Uuid, Path, description = "Container UUID"),
     ),
     responses(
-        (status = 200, description = "Container record", body = inline(ApiResponse<ContainerRecord>)),
+        (status = 200, description = "Container record with caller's permission bitmask", body = inline(ApiResponse<ContainerWithPermissions>)),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "Not found"),
     ),
@@ -110,10 +113,16 @@ pub async fn get(
     Path(container_id): Path<Uuid>,
     State(state): State<AppState>,
     actor: AuthenticatedUser,
-) -> Result<Json<ApiResponse<ContainerRecord>>, ApiError> {
-    Ok(Json(ApiResponse::new(
-        state.container_service.get(&actor, container_id).await?,
-    )))
+) -> Result<Json<ApiResponse<ContainerWithPermissions>>, ApiError> {
+    let container = state.container_service.get(&actor, container_id).await?;
+    let permissions = state
+        .container_service
+        .get_permissions_for_user(&actor, container_id)
+        .await?;
+    Ok(Json(ApiResponse::new(ContainerWithPermissions {
+        container,
+        permissions: permissions.0,
+    })))
 }
 
 /// Starts a container and returns the verified container record.
@@ -227,4 +236,117 @@ pub async fn metrics(
             .metrics(&actor, container_id)
             .await?,
     )))
+}
+
+// ── Container sharing invitations ────────────────────────────────────────────
+
+/// Request body for inviting a user to share a container.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct ShareContainerBody {
+    pub email: String,
+    /// Permission bitmask to grant the invitee when they accept.
+    ///
+    /// Must be a subset of the caller's own permissions and must always include
+    /// bit 1 (`PERM_VIEW`).  If omitted, defaults to `3` (view + metrics).
+    #[serde(default = "default_share_permissions")]
+    pub permissions: i32,
+}
+
+fn default_share_permissions() -> i32 {
+    crate::models::container::PRESET_VIEWER
+}
+
+/// Request body for responding to a container-sharing invitation.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct SharingRespondBody {
+    /// Must be `"accepted"` or `"declined"`.
+    pub response: String,
+}
+
+/// `POST /api/v1/containers/{container_id}/share` — invite a user by email.
+///
+/// Only the container owner may send invitations.
+/// The invited user must already have an account on the platform.
+/// Supports session, OAuth, and PAT authentication.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/{container_id}/share",
+    params(("container_id" = uuid::Uuid, Path, description = "Container UUID")),
+    request_body = ShareContainerBody,
+    responses(
+        (status = 200, description = "Invitation created", body = inline(ApiResponse<ContainerInvitation>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden — only the container owner may invite"),
+        (status = 404, description = "Container or email not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
+pub async fn share(
+    Path(container_id): Path<Uuid>,
+    _csrf: CsrfProtected,
+    State(state): State<AppState>,
+    actor: AuthenticatedUser,
+    Json(body): Json<ShareContainerBody>,
+) -> Result<Json<ApiResponse<ContainerInvitation>>, ApiError> {
+    let inv = state
+        .container_service
+        .invite_by_email(&actor, container_id, body.email, body.permissions)
+        .await?;
+    Ok(Json(ApiResponse::new(inv)))
+}
+
+/// `GET /api/v1/containers/invitations/pending` — list pending sharing invitations.
+///
+/// Returns all unanswered container-sharing invitations addressed to the current user.
+/// Supports session, OAuth, and PAT authentication.
+#[utoipa::path(
+    get,
+    path = "/api/v1/containers/invitations/pending",
+    responses(
+        (status = 200, description = "Pending container-sharing invitations", body = inline(ApiResponse<Vec<PendingContainerInvitationView>>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
+pub async fn pending_sharing_invitations(
+    State(state): State<AppState>,
+    actor: AuthenticatedUser,
+) -> Result<Json<ApiResponse<Vec<PendingContainerInvitationView>>>, ApiError> {
+    let invitations = state.container_service.pending_invitations(&actor).await?;
+    Ok(Json(ApiResponse::new(invitations)))
+}
+
+/// `POST /api/v1/containers/invitations/{invitation_id}/respond` — accept or decline.
+///
+/// Only the invited user may respond. Accepting grants `viewer` access to the container.
+/// Supports session, OAuth, and PAT authentication.
+#[utoipa::path(
+    post,
+    path = "/api/v1/containers/invitations/{invitation_id}/respond",
+    params(("invitation_id" = uuid::Uuid, Path, description = "Invitation UUID")),
+    request_body = SharingRespondBody,
+    responses(
+        (status = 200, description = "Response recorded"),
+        (status = 400, description = "Invalid response value"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Invitation belongs to a different user"),
+        (status = 404, description = "Invitation not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "containers",
+)]
+pub async fn respond_to_sharing_invitation(
+    Path(invitation_id): Path<Uuid>,
+    _csrf: CsrfProtected,
+    State(state): State<AppState>,
+    actor: AuthenticatedUser,
+    Json(body): Json<SharingRespondBody>,
+) -> Result<Json<ApiResponse<&'static str>>, ApiError> {
+    state
+        .container_service
+        .respond_to_invitation(&actor, invitation_id, body.response)
+        .await?;
+    Ok(Json(ApiResponse::new("ok")))
 }

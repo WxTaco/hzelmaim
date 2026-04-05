@@ -63,14 +63,14 @@ fn require_owner(app: &OAuthApplication, actor: &AuthenticatedUser) -> Result<()
 
 // ── Request / response types ──────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateAppRequest {
     pub name: String,
     pub description: Option<String>,
     pub redirect_uris: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct CreateAppResponse {
     /// The raw client secret — shown only once at creation time.
     pub client_secret: String,
@@ -78,14 +78,14 @@ pub struct CreateAppResponse {
     pub app: OAuthApplicationView,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdateAppRequest {
     pub name: String,
     pub description: Option<String>,
     pub redirect_uris: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct RotateSecretResponse {
     /// New raw client secret — shown only once.
     pub client_secret: String,
@@ -94,6 +94,18 @@ pub struct RotateSecretResponse {
 // ── App management handlers ───────────────────────────────────────────────────
 
 /// `POST /api/v1/oauth/apps` — register a new OAuth application.
+#[utoipa::path(
+    post,
+    path = "/api/v1/oauth/apps",
+    request_body = CreateAppRequest,
+    responses(
+        (status = 200, description = "Application registered", body = inline(ApiResponse<CreateAppResponse>)),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn create_app(
     State(state): State<AppState>,
     actor: AuthenticatedUser,
@@ -134,6 +146,16 @@ pub async fn create_app(
 }
 
 /// `GET /api/v1/oauth/apps` — list the authenticated user's OAuth applications.
+#[utoipa::path(
+    get,
+    path = "/api/v1/oauth/apps",
+    responses(
+        (status = 200, description = "List of OAuth applications", body = inline(ApiResponse<Vec<OAuthApplicationView>>)),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn list_apps(
     State(state): State<AppState>,
     actor: AuthenticatedUser,
@@ -143,7 +165,19 @@ pub async fn list_apps(
     Ok(Json(ApiResponse::new(views)))
 }
 
-/// `GET /api/v1/oauth/apps/:id` — fetch one of the authenticated user's apps.
+/// `GET /api/v1/oauth/apps/{id}` — fetch one of the authenticated user's apps.
+#[utoipa::path(
+    get,
+    path = "/api/v1/oauth/apps/{id}",
+    params(("id" = uuid::Uuid, Path, description = "Application UUID")),
+    responses(
+        (status = 200, description = "OAuth application", body = inline(ApiResponse<OAuthApplicationView>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn get_app(
     Path(app_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -159,7 +193,21 @@ pub async fn get_app(
 }
 
 
-/// `PATCH /api/v1/oauth/apps/:id` — update name, description, or redirect URIs.
+/// `PATCH /api/v1/oauth/apps/{id}` — update name, description, or redirect URIs.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/oauth/apps/{id}",
+    params(("id" = uuid::Uuid, Path, description = "Application UUID")),
+    request_body = UpdateAppRequest,
+    responses(
+        (status = 200, description = "Updated application", body = inline(ApiResponse<OAuthApplicationView>)),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn update_app(
     Path(app_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -190,7 +238,19 @@ pub async fn update_app(
     Ok(Json(ApiResponse::new(OAuthApplicationView::from(updated))))
 }
 
-/// `DELETE /api/v1/oauth/apps/:id` — soft-delete an app and revoke all its tokens.
+/// `DELETE /api/v1/oauth/apps/{id}` — soft-delete an app and revoke all its tokens.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/oauth/apps/{id}",
+    params(("id" = uuid::Uuid, Path, description = "Application UUID")),
+    responses(
+        (status = 200, description = "Application deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn delete_app(
     Path(app_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -206,10 +266,22 @@ pub async fn delete_app(
     Ok(Json(ApiResponse::new("deleted")))
 }
 
-/// `POST /api/v1/oauth/apps/:id/secret` — rotate the client secret.
+/// `POST /api/v1/oauth/apps/{id}/secret` — rotate the client secret.
 ///
 /// All existing refresh tokens for the app are revoked because they were issued
 /// using the old secret and can no longer be refreshed once the secret changes.
+#[utoipa::path(
+    post,
+    path = "/api/v1/oauth/apps/{id}/secret",
+    params(("id" = uuid::Uuid, Path, description = "Application UUID")),
+    responses(
+        (status = 200, description = "New client secret issued", body = inline(ApiResponse<RotateSecretResponse>)),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn rotate_secret(
     Path(app_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -237,8 +309,18 @@ pub async fn rotate_secret(
     })))
 }
 
-/// `GET /api/v1/oauth/apps/public/:client_id` — unauthenticated public app info
+/// `GET /api/v1/oauth/apps/public/{client_id}` — unauthenticated public app info
 /// returned to the consent page so it can display the app's name and owner.
+#[utoipa::path(
+    get,
+    path = "/api/v1/oauth/apps/public/{client_id}",
+    params(("client_id" = uuid::Uuid, Path, description = "OAuth client_id")),
+    responses(
+        (status = 200, description = "Public application info", body = inline(ApiResponse<OAuthAppPublicView>)),
+        (status = 404, description = "Not found"),
+    ),
+    tag = "oauth",
+)]
 pub async fn public_app_info(
     Path(client_id): Path<Uuid>,
     State(state): State<AppState>,
@@ -269,7 +351,7 @@ pub async fn public_app_info(
 
 // ── OAuth 2.0 Authorization Code Flow ────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct AuthorizeParams {
     pub client_id: Uuid,
     pub redirect_uri: String,
@@ -277,7 +359,7 @@ pub struct AuthorizeParams {
     pub state: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct AuthorizeBody {
     pub client_id: Uuid,
     pub redirect_uri: String,
@@ -285,7 +367,7 @@ pub struct AuthorizeBody {
     pub approved: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct AuthorizeResponse {
     /// The URL the frontend should navigate the browser to.
     pub redirect_url: String,
@@ -295,6 +377,22 @@ pub struct AuthorizeResponse {
 /// URL the frontend should redirect the browser to (the consent page).
 ///
 /// No authentication required — the client app drives the browser here first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/oauth/authorize",
+    params(
+        ("client_id" = uuid::Uuid, Query, description = "OAuth client_id"),
+        ("redirect_uri" = String, Query, description = "Registered redirect URI"),
+        ("response_type" = String, Query, description = "Must be \"code\""),
+        ("state" = String, Query, description = "Caller-supplied state for CSRF"),
+    ),
+    responses(
+        (status = 200, description = "Consent page redirect URL", body = inline(ApiResponse<AuthorizeResponse>)),
+        (status = 400, description = "Invalid parameters"),
+        (status = 404, description = "Application not found"),
+    ),
+    tag = "oauth",
+)]
 pub async fn authorize_get(
     State(state): State<AppState>,
     Query(params): Query<AuthorizeParams>,
@@ -319,6 +417,19 @@ pub async fn authorize_get(
 /// Returns the URL the frontend should navigate the browser to. On approval this
 /// is `redirect_uri?code=...&state=...`; on denial it is
 /// `redirect_uri?error=access_denied&state=...`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/oauth/authorize",
+    request_body = AuthorizeBody,
+    responses(
+        (status = 200, description = "Redirect URL after consent", body = inline(ApiResponse<AuthorizeResponse>)),
+        (status = 400, description = "Invalid parameters"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Application not found"),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "oauth",
+)]
 pub async fn authorize_post(
     State(state): State<AppState>,
     actor: AuthenticatedUser,
@@ -394,7 +505,7 @@ async fn validate_authorize_params(
 
 // ── Token endpoint ────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct TokenRequest {
     pub grant_type: String,
     /// Required for authorization_code grant.
@@ -407,7 +518,7 @@ pub struct TokenRequest {
     pub client_secret: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct TokenResponse {
     pub access_token: String,
     pub token_type: &'static str,
@@ -417,6 +528,17 @@ pub struct TokenResponse {
 
 /// `POST /api/v1/oauth/token` — exchange an authorization code or refresh token
 /// for a new access token + refresh token pair.
+#[utoipa::path(
+    post,
+    path = "/api/v1/oauth/token",
+    request_body = TokenRequest,
+    responses(
+        (status = 200, description = "Access and refresh token pair", body = TokenResponse),
+        (status = 400, description = "Invalid grant or parameters"),
+        (status = 401, description = "Invalid client credentials"),
+    ),
+    tag = "oauth",
+)]
 pub async fn token(
     State(state): State<AppState>,
     Json(body): Json<TokenRequest>,
@@ -530,14 +652,24 @@ async fn issue_refresh_token(
 
 // ── Revoke endpoint ───────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RevokeRequest {
     pub refresh_token: String,
     pub client_id: Uuid,
     pub client_secret: String,
 }
 
-/// `POST /api/v1/oauth/token/revoke` — revoke a refresh token.
+/// `POST /api/v1/oauth/token/revoke` — revoke a refresh token (RFC 7009).
+#[utoipa::path(
+    post,
+    path = "/api/v1/oauth/token/revoke",
+    request_body = RevokeRequest,
+    responses(
+        (status = 200, description = "Token revoked (idempotent)"),
+        (status = 401, description = "Invalid client credentials"),
+    ),
+    tag = "oauth",
+)]
 pub async fn revoke(
     State(state): State<AppState>,
     Json(body): Json<RevokeRequest>,

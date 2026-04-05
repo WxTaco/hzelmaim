@@ -17,18 +17,22 @@ use hzel_backend::{
     db::{
         self, api_token_repo::PgApiTokenRepo, audit_repo::PgAuditRepo,
         command_repo::PgCommandRepo, container_repo::PgContainerRepo,
+        network_repo::PgNetworkRepo,
         oauth_repo::{PgOAuthAppRepo, PgOAuthCodeRepo, PgOAuthTokenRepo},
         pg_auth_store::PgAuthStore, program_repo::PgProgramRepo, user_repo::PgUserRepo,
+        webhook_repo::PgWebhookRepo,
     },
     jobs::state_sync,
     proxmox::{client::StubProxmoxClient, http_client::HttpProxmoxClient},
     services::{
         audit_service::AuditService, command_service::CommandService,
-        container_service::ContainerService, program_service::ProgramService,
-        terminal_service::TerminalService,
+        container_service::ContainerService, network_service::NetworkService,
+        program_service::ProgramService, terminal_service::TerminalService,
+        webhook_service::WebhookService,
     },
     ssh_ca::SshCa,
     utils::logging::init_tracing,
+    webhooks::registry::ProviderRegistry,
 };
 use tokio::net::TcpListener;
 use tracing::info;
@@ -155,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         container_repo.clone(),
         audit.clone(),
     ));
-    let command_service = Arc::new(CommandService::new(command_repo, audit));
+    let command_service = Arc::new(CommandService::new(command_repo, audit.clone()));
 
     // Terminal service — requires SSH CA; if unavailable, sessions will error at runtime.
     let terminal_service = Arc::new(TerminalService::new(
@@ -167,6 +171,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Programs & invitations service.
     let program_repo = Arc::new(PgProgramRepo::new(pool.clone()));
     let program_service = Arc::new(ProgramService::new(program_repo));
+
+    // Private networking service.
+    let network_repo: Arc<dyn hzel_backend::db::network_repo::NetworkRepo> =
+        Arc::new(PgNetworkRepo::new(pool.clone()));
+    let network_service = Arc::new(NetworkService::new(
+        network_repo,
+        container_repo.clone(),
+        proxmox.clone(),
+        terminal_service.clone(),
+        audit.clone(),
+    ));
+
+    // Webhook infrastructure.
+    let webhook_repo: Arc<dyn hzel_backend::db::webhook_repo::WebhookRepo> =
+        Arc::new(PgWebhookRepo::new(pool.clone()));
+    let provider_registry = Arc::new(ProviderRegistry::new());
+    let webhook_service = Arc::new(WebhookService::new(
+        webhook_repo,
+        container_repo.clone(),
+        terminal_service.clone(),
+        provider_registry.clone(),
+    ));
 
     // OIDC service — initialise if enabled.
     let oidc_service = if config.oidc_enabled {
@@ -193,12 +219,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         command_service,
         terminal_service,
         program_service,
+        network_service,
         user_repo,
         api_token_repo,
         oauth_app_repo,
         oauth_code_repo,
         oauth_token_repo,
         oidc_service,
+        webhook_service,
+        provider_registry,
     );
 
     // Background state sync — reconcile DB with Proxmox every 30 seconds.

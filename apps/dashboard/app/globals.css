@@ -189,4 +189,12 @@
   .stat-value {
     @apply font-heading text-3xl font-bold tracking-tight sm:text-4xl;
   }
+
+  /* Hide scrollbar while keeping element scrollable (used for horizontal tab lists) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 }

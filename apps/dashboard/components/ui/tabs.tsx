@@ -63,7 +63,7 @@ function TabsList({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="tabs-list"
       role="tablist"
       className={cn(
-        "inline-flex h-11 sm:h-10 w-full sm:w-auto items-center gap-1 rounded-lg bg-muted/50 p-1 text-muted-foreground overflow-x-auto",
+        "flex sm:h-10 w-full items-center gap-1 rounded-lg bg-muted/50 p-1 text-muted-foreground overflow-x-auto scrollbar-none",
         className
       )}
       {...props}
@@ -90,7 +90,7 @@ function TabsTrigger({ value, className, ...props }: TabsTriggerProps) {
       className={cn(
         // Base styles with improved touch targets (min 44px on mobile)
         "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md",
-        "min-h-[44px] sm:min-h-0 px-4 sm:px-3 py-2 sm:py-1.5 flex-1 sm:flex-none",
+        "min-h-[44px] sm:min-h-0 px-4 sm:px-3 py-2 sm:py-1.5 shrink-0",
         "text-sm font-medium transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",

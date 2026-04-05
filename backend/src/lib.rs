@@ -11,3 +11,4 @@ pub mod proxmox;
 pub mod services;
 pub mod ssh_ca;
 pub mod utils;
+pub mod webhooks;

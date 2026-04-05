@@ -4,10 +4,12 @@ pub mod api_token_repo;
 pub mod audit_repo;
 pub mod command_repo;
 pub mod container_repo;
+pub mod network_repo;
 pub mod oauth_repo;
 pub mod pg_auth_store;
 pub mod program_repo;
 pub mod user_repo;
+pub mod webhook_repo;
 
 use sqlx::postgres::PgPoolOptions;
 

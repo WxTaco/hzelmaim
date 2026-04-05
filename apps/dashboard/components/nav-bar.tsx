@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Boxes, Code2, ScrollText, Settings, ShieldCheck, X } from "lucide-react"
+import { Boxes, Code2, Network, Settings, ShieldCheck, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,7 @@ interface NavItem {
 /** Base navigation items shown to all authenticated users. */
 const BASE_NAV_ITEMS: readonly NavItem[] = [
   { label: "VPS", href: "/dashboard", icon: Boxes },
-  { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
+  { label: "Networks", href: "/dashboard/networks", icon: Network },
   { label: "Developer", href: "/dashboard/developer", icon: Code2 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ] as const
@@ -275,7 +275,7 @@ export function MobileSidebar() {
 
           {/* Sidebar drawer */}
           <motion.aside
-            className="fixed left-0 top-0 z-50 h-screen w-64 flex-col border-r border-border bg-background md:hidden"
+            className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-border bg-background md:hidden"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}

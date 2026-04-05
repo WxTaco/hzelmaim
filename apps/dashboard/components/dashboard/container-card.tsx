@@ -15,6 +15,8 @@ export interface ContainerRecord {
   disk_gb: number;
   state: "provisioning" | "running" | "stopped" | "failed";
   created_at: string;
+  /** Permission bitmask for the authenticated user on this container. */
+  permissions: number;
 }
 
 interface ContainerCardProps {

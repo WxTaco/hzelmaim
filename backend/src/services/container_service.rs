@@ -10,7 +10,11 @@ use uuid::Uuid;
 use crate::{
     auth::context::AuthenticatedUser,
     db::container_repo::ContainerRepo,
-    models::container::{AccessLevel, ContainerRecord, ContainerState},
+    models::container::{
+        ContainerInvitation, ContainerRecord, ContainerState, ContainerWithPermissions,
+        PendingContainerInvitationView, Permissions, PERM_READ_METRICS, PERM_SHARE,
+        PERM_START_STOP, PERM_VIEW, PRESET_OWNER,
+    },
     proxmox::{
         client::ProxmoxClient,
         types::{ContainerMetrics, ContainerRuntimeStatus, CreateContainerRequest},
@@ -46,15 +50,16 @@ impl ContainerService {
         }
     }
 
-    /// Lists containers visible to the current actor.
+    /// Lists containers visible to the current actor, each annotated with the
+    /// actor's permission bitmask for that container.
     pub async fn list_for_user(
         &self,
         actor: &AuthenticatedUser,
-    ) -> Result<Vec<ContainerRecord>, ApiError> {
+    ) -> Result<Vec<ContainerWithPermissions>, ApiError> {
         self.containers.list_for_user(actor.user_id).await
     }
 
-    /// Loads a single container by id with access check.
+    /// Loads a single container by id, gated on `PERM_VIEW`.
     pub async fn get(
         &self,
         actor: &AuthenticatedUser,
@@ -65,9 +70,49 @@ impl ContainerService {
             .get(container_id)
             .await?
             .ok_or_else(|| ApiError::container_not_found(container_id.to_string()))?;
-        self.require_access(actor, container_id, AccessLevel::Viewer)
+        self.require_permission(actor, container_id, PERM_VIEW)
             .await?;
         Ok(container)
+    }
+
+    /// Returns the full permission bitmask the actor holds for `container_id`.
+    ///
+    /// Admins receive `PRESET_OWNER` (all bits set) without a DB round-trip.
+    pub async fn get_permissions_for_user(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+    ) -> Result<Permissions, ApiError> {
+        if actor.effective_role() == &crate::models::user::UserRole::Admin {
+            return Ok(Permissions(PRESET_OWNER));
+        }
+        self.containers
+            .get_permissions(container_id, actor.user_id)
+            .await
+    }
+
+    /// Verifies that `actor` holds the given permission bit for `container_id`.
+    ///
+    /// Admins bypass the check.  Returns 403 when the bit is not set.
+    pub async fn require_permission(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+        flag: i32,
+    ) -> Result<(), ApiError> {
+        if actor.effective_role() == &crate::models::user::UserRole::Admin {
+            return Ok(());
+        }
+        let perms = self
+            .containers
+            .get_permissions(container_id, actor.user_id)
+            .await?;
+        if !perms.has(flag) {
+            return Err(ApiError::forbidden(
+                "You do not have permission to perform this action on the container",
+            ));
+        }
+        Ok(())
     }
 
     /// Creates and starts a container.
@@ -150,7 +195,7 @@ impl ContainerService {
         container_id: Uuid,
     ) -> Result<ContainerRecord, ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator)
+        self.require_permission(actor, container_id, PERM_START_STOP)
             .await?;
         self.proxmox.start_container(container.proxmox_ctid).await?;
 
@@ -189,7 +234,7 @@ impl ContainerService {
         container_id: Uuid,
     ) -> Result<ContainerRecord, ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator)
+        self.require_permission(actor, container_id, PERM_START_STOP)
             .await?;
         self.proxmox.stop_container(container.proxmox_ctid).await?;
 
@@ -228,7 +273,7 @@ impl ContainerService {
         container_id: Uuid,
     ) -> Result<ContainerRecord, ApiError> {
         let container = self.get(actor, container_id).await?;
-        self.require_access(actor, container_id, AccessLevel::Operator)
+        self.require_permission(actor, container_id, PERM_START_STOP)
             .await?;
         self.proxmox
             .restart_container(container.proxmox_ctid)
@@ -296,14 +341,123 @@ impl ContainerService {
         }
     }
 
-    /// Retrieves metrics for a container that belongs to the current actor.
+    /// Retrieves metrics for a container, gated on `PERM_READ_METRICS`.
     pub async fn metrics(
         &self,
         actor: &AuthenticatedUser,
         container_id: Uuid,
     ) -> Result<ContainerMetrics, ApiError> {
         let container = self.get(actor, container_id).await?;
+        self.require_permission(actor, container_id, PERM_READ_METRICS)
+            .await?;
         self.proxmox.container_metrics(container.proxmox_ctid).await
+    }
+
+    // ── Container sharing ────────────────────────────────────────────────────
+
+    /// Invites `email` to share `container_id` with the specified permission bitmask.
+    ///
+    /// Only users who hold `PERM_SHARE` may send invitations.  The requested
+    /// `permissions` must be a subset of the actor's own permissions — you
+    /// cannot grant rights you do not hold — and must always include `PERM_VIEW`
+    /// (otherwise the invitee would not be able to see the container at all).
+    ///
+    /// Returns an error when the email address does not belong to a registered user.
+    pub async fn invite_by_email(
+        &self,
+        actor: &AuthenticatedUser,
+        container_id: Uuid,
+        email: String,
+        permissions: i32,
+    ) -> Result<ContainerInvitation, ApiError> {
+        // Only users with PERM_SHARE may invite.
+        self.require_permission(actor, container_id, PERM_SHARE).await?;
+
+        // PERM_VIEW must always be included — without it the invitee's container
+        // would be invisible.
+        if permissions & PERM_VIEW == 0 {
+            return Err(ApiError::bad_request(
+                "permissions must include PERM_VIEW (bit 1) so the invitee can see the container",
+            ));
+        }
+
+        // Prevent privilege escalation: the granted mask must be a strict subset
+        // of what the actor themselves holds.
+        let actor_perms = self
+            .get_permissions_for_user(actor, container_id)
+            .await?;
+        if permissions & actor_perms.0 != permissions {
+            return Err(ApiError::forbidden(
+                "You cannot grant permissions you do not hold on this container",
+            ));
+        }
+
+        // Resolve the email to a user_id.
+        let user_id = self
+            .containers
+            .find_user_by_email(&email)
+            .await?
+            .ok_or_else(|| ApiError::not_found("No user found with that email address"))?;
+
+        let inv = ContainerInvitation {
+            id: Uuid::new_v4(),
+            container_id,
+            user_id,
+            invited_by: actor.user_id,
+            invited_at: chrono::Utc::now(),
+            responded_at: None,
+            response: None,
+            permissions,
+        };
+        self.containers.create_container_invitation(&inv).await?;
+        Ok(inv)
+    }
+
+    /// Returns all unanswered container-sharing invitations for the current user.
+    pub async fn pending_invitations(
+        &self,
+        actor: &AuthenticatedUser,
+    ) -> Result<Vec<PendingContainerInvitationView>, ApiError> {
+        self.containers.pending_container_invitations(actor.user_id).await
+    }
+
+    /// Records the authenticated user's response to a container-sharing invitation.
+    ///
+    /// Returns 403 if the invitation belongs to a different user.
+    /// When accepted, the invitee is granted `viewer` access to the container.
+    pub async fn respond_to_invitation(
+        &self,
+        actor: &AuthenticatedUser,
+        invitation_id: Uuid,
+        response: String,
+    ) -> Result<(), ApiError> {
+        if response != "accepted" && response != "declined" {
+            return Err(ApiError::bad_request(
+                r#"response must be "accepted" or "declined""#,
+            ));
+        }
+
+        let inv = self
+            .containers
+            .get_container_invitation(invitation_id)
+            .await?
+            .ok_or_else(|| ApiError::not_found("Invitation not found"))?;
+
+        if inv.user_id != actor.user_id {
+            return Err(ApiError::forbidden(
+                "This invitation does not belong to you",
+            ));
+        }
+
+        self.containers
+            .respond_to_container_invitation(
+                invitation_id,
+                inv.container_id,
+                actor.user_id,
+                &response,
+                inv.permissions,
+            )
+            .await
     }
 
     /// Returns a reference to the container repo (used by background sync).
@@ -316,31 +470,6 @@ impl ContainerService {
         &self.proxmox
     }
 
-    /// Checks that the actor has the required access level to a container.
-    ///
-    /// Admins bypass the ownership check unless the request is authenticated
-    /// via an OAuth application token, which is always restricted to the
-    /// authorizing user's own resources.
-    async fn require_access(
-        &self,
-        actor: &AuthenticatedUser,
-        container_id: Uuid,
-        minimum: AccessLevel,
-    ) -> Result<(), ApiError> {
-        if actor.effective_role() == &crate::models::user::UserRole::Admin {
-            return Ok(());
-        }
-        let has_access = self
-            .containers
-            .check_access(container_id, actor.user_id, minimum)
-            .await?;
-        if !has_access {
-            return Err(ApiError::forbidden(
-                "You do not have access to this container",
-            ));
-        }
-        Ok(())
-    }
 }
 
 

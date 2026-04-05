@@ -16,6 +16,8 @@ import {
   Cpu,
   HardDrive,
   Network,
+  Webhook,
+  UserPlus,
 } from "lucide-react";
 import { apiFetch } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { ContainerRecord } from "@/components/dashboard/container-card";
 import { WebTerminal } from "@/components/dashboard/web-terminal";
+import { WebhooksTab } from "@/components/dashboard/webhooks-tab";
+import { ShareTab } from "@/components/dashboard/share-tab";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -150,7 +154,7 @@ export default function ContainerDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
         <div className="mb-6 h-5 w-16 rounded-lg bg-muted animate-pulse" />
         <div className="mb-2 h-7 w-48 rounded-lg bg-muted animate-pulse" />
         <div className="mt-6 h-10 w-64 rounded-lg bg-muted animate-pulse" />
@@ -161,7 +165,7 @@ export default function ContainerDetailPage() {
 
   if (error || !container) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 gap-3 text-center">
+      <div className="flex flex-col items-center justify-center p-8 sm:p-16 gap-3 text-center">
         <ServerCrash className="size-10 text-muted-foreground" />
         <p className="text-base font-medium">Failed to load container</p>
         <p className="text-sm text-muted-foreground max-w-md">{error}</p>
@@ -181,7 +185,7 @@ export default function ContainerDetailPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6">
       {/* Back Button */}
       <motion.div
         initial={{ opacity: 0, x: -6 }}
@@ -257,7 +261,7 @@ export default function ContainerDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: EASE }}
       >
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" className="gap-6">
           <TabsList>
             <TabsTrigger value="overview" className="gap-1.5">
               <Info className="size-4" />
@@ -266,6 +270,14 @@ export default function ContainerDetailPage() {
             <TabsTrigger value="metrics" className="gap-1.5">
               <Activity className="size-4" />
               Metrics
+            </TabsTrigger>
+            <TabsTrigger value="webhooks" className="gap-1.5">
+              <Webhook className="size-4" />
+              Webhooks
+            </TabsTrigger>
+            <TabsTrigger value="sharing" className="gap-1.5">
+              <UserPlus className="size-4" />
+              Sharing
             </TabsTrigger>
             <TabsTrigger
               value="terminal"
@@ -408,6 +420,16 @@ export default function ContainerDetailPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Webhooks Tab */}
+          <TabsContent value="webhooks">
+            <WebhooksTab containerId={container.id} />
+          </TabsContent>
+
+          {/* Sharing Tab */}
+          <TabsContent value="sharing">
+            <ShareTab containerId={container.id} userPermissions={container.permissions} />
           </TabsContent>
 
           {/* Terminal Tab */}

@@ -65,10 +65,22 @@ pub async fn terminal_stream(
     headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> Result<Response, ApiError> {
-    // Resolve the authenticated user. WebSocket clients can't set custom headers,
-    // so the token is carried in the `?token=` query parameter instead.
+    // Resolve the authenticated user.  WebSocket clients cannot set custom
+    // headers, so the token is carried in the `?token=` query parameter.
     let bearer = auth_query.token.as_deref();
     let user = resolver::resolve_authenticated_user(&headers, bearer, &state).await?;
+
+    // Check PERM_VIEW (proves the container exists and the user can see it).
+    state.container_service.get(&user, container_id).await?;
+
+    // Check PERM_TERMINAL *before* upgrading — once the WebSocket handshake
+    // completes we can no longer send a plain HTTP 403.
+    // Shared viewers hold PERM_VIEW | PERM_READ_METRICS only and are rejected
+    // here, closing the specific bug that allowed them to open a terminal.
+    state
+        .container_service
+        .require_permission(&user, container_id, crate::models::container::PERM_TERMINAL)
+        .await?;
 
     Ok(ws.on_upgrade(move |socket| async move {
         if let Err(e) = handle_terminal(socket, container_id, user, state).await {

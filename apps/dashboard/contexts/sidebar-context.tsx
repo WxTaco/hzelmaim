@@ -76,14 +76,9 @@ export function SidebarProvider({
    * the sidebar when transitioning to mobile.
    */
   React.useEffect(() => {
-    // Check initial viewport size
+    // Check initial viewport size (no auto-close here — that's the resize handler's job)
     const checkMobile = () => {
-      const mobile = window.innerWidth < MOBILE_BREAKPOINT
-      setIsMobile(mobile)
-      // Auto-close sidebar when entering mobile viewport
-      if (mobile && isOpen) {
-        setIsOpen(false)
-      }
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
 
     // Initial check
@@ -93,6 +88,7 @@ export function SidebarProvider({
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const handler = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches)
+      // Auto-close sidebar when the viewport shrinks into mobile
       if (e.matches) {
         setIsOpen(false)
       }
@@ -100,7 +96,7 @@ export function SidebarProvider({
 
     mediaQuery.addEventListener("change", handler)
     return () => mediaQuery.removeEventListener("change", handler)
-  }, [isOpen])
+  }, [])
 
   /**
    * Opens the sidebar (mobile drawer or desktop sidebar).

@@ -377,6 +377,111 @@ impl ProxmoxClient for HttpProxmoxClient {
         Ok(())
     }
 
+    async fn create_bridge(&self, bridge_id: i32) -> Result<(), ApiError> {
+        let bridge_name = format!("vmbr{bridge_id}");
+        let url = self.node_url("/network");
+
+        // Create the bridge device.
+        let resp = self
+            .client
+            .post(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&[
+                ("iface", bridge_name.as_str()),
+                ("type", "bridge"),
+                ("autostart", "1"),
+                ("comments", "hzel-private-network"),
+            ])
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox create bridge failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Proxmox create bridge error: {body}"
+            )));
+        }
+
+        // Apply the pending network configuration change.
+        self.apply_network_config().await
+    }
+
+    async fn delete_bridge(&self, bridge_name: &str) -> Result<(), ApiError> {
+        let url = self.node_url(&format!("/network/{bridge_name}"));
+
+        let resp = self
+            .client
+            .delete(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox delete bridge failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Proxmox delete bridge error: {body}"
+            )));
+        }
+
+        self.apply_network_config().await
+    }
+
+    async fn attach_container_nic(
+        &self,
+        ctid: i32,
+        net_index: u8,
+        bridge: &str,
+        ip: &str,
+        prefix_len: u8,
+    ) -> Result<(), ApiError> {
+        let url = self.node_url(&format!("/lxc/{ctid}/config"));
+        let net_key = format!("net{net_index}");
+        let eth_name = format!("eth{net_index}");
+        // Static IP, no default gateway (private network — containers route only within CIDR).
+        let net_val = format!("name={eth_name},bridge={bridge},ip={ip}/{prefix_len},firewall=0");
+
+        let resp = self
+            .client
+            .put(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&[(net_key.as_str(), net_val.as_str())])
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox attach NIC failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Proxmox attach NIC error: {body}"
+            )));
+        }
+        Ok(())
+    }
+
+    async fn detach_container_nic(&self, ctid: i32, net_index: u8) -> Result<(), ApiError> {
+        let url = self.node_url(&format!("/lxc/{ctid}/config"));
+        let net_key = format!("net{net_index}");
+
+        let resp = self
+            .client
+            .put(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .form(&[("delete", net_key.as_str())])
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox detach NIC failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Proxmox detach NIC error: {body}"
+            )));
+        }
+        Ok(())
+    }
+
     async fn get_container_ip(&self, ctid: i32) -> Result<String, ApiError> {
         let url = self.node_url(&format!("/lxc/{ctid}/interfaces"));
         let http_resp = self
@@ -422,6 +527,29 @@ impl ProxmoxClient for HttpProxmoxClient {
 }
 
 impl HttpProxmoxClient {
+    /// Applies pending network configuration on the Proxmox node.
+    ///
+    /// This is required after creating or deleting a bridge: Proxmox writes the
+    /// changes to `/etc/network/interfaces` and brings the interface up/down.
+    async fn apply_network_config(&self) -> Result<(), ApiError> {
+        let url = self.node_url("/network");
+        let resp = self
+            .client
+            .put(&url)
+            .header(header::AUTHORIZATION, &self.auth_header)
+            .send()
+            .await
+            .map_err(|e| ApiError::internal(format!("Proxmox network apply failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ApiError::internal(format!(
+                "Proxmox network apply error: {body}"
+            )));
+        }
+        Ok(())
+    }
+
     /// Polls the CT status until the Proxmox `lock` field is absent (i.e. the
     /// disk lock set during a full clone has been released) or `timeout_secs` elapses.
     async fn wait_for_unlock(&self, ctid: i32, timeout_secs: u64) -> Result<(), ApiError> {

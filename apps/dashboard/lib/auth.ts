@@ -72,6 +72,56 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   clearAuthCookie();
   clearRefreshCookie();
+  clearCsrfToken();
+}
+
+// ── CSRF Token ────────────────────────────────────────────────────────────────
+//
+// The backend requires an `x-csrf-token` header on mutating requests when the
+// session cookie (`__Host-hzel_session`) is the resolved auth method.  Bearer
+// tokens (PAT / OAuth) are stateless and the backend skips CSRF for them, but
+// including the header is harmless.
+//
+// We fetch the token lazily from GET /api/v1/auth/session on the first mutating
+// request, cache it in memory for the session lifetime, and clear it on logout.
+
+let cachedCsrfToken: string | null = null;
+let csrfFetchPromise: Promise<string | null> | null = null;
+
+export function clearCsrfToken() {
+  cachedCsrfToken = null;
+  csrfFetchPromise = null;
+}
+
+/**
+ * Returns the CSRF token bound to the current browser session.
+ * Fetches it from the session endpoint on first call, then caches it.
+ * Returns null when no session cookie is present (PAT/OAuth contexts).
+ */
+async function getCsrfToken(): Promise<string | null> {
+  if (cachedCsrfToken) return cachedCsrfToken;
+  if (csrfFetchPromise) return csrfFetchPromise;
+
+  csrfFetchPromise = (async () => {
+    try {
+      // Use credentials:'include' so the HttpOnly session cookie is sent even
+      // for cross-origin API URLs.  No Authorization header needed — the backend
+      // resolves auth via the cookie for this endpoint.
+      const res = await fetch(`${API_URL}/api/v1/auth/session`, {
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      const body = await res.json();
+      cachedCsrfToken = (body?.data?.session?.csrf_token as string) ?? null;
+      return cachedCsrfToken;
+    } catch {
+      return null;
+    } finally {
+      csrfFetchPromise = null;
+    }
+  })();
+
+  return csrfFetchPromise;
 }
 
 /** Decoded payload of our access token. */
@@ -84,7 +134,10 @@ export interface TokenClaims {
   picture_url: string | null;
   /** User role — `"admin"` or `"user"`. */
   role: string;
-  session_id: string;
+  /** Present for OIDC/session tokens; absent for OAuth tokens. */
+  session_id?: string;
+  /** Present for OAuth tokens; absent for OIDC/session tokens. */
+  client_id?: string;
   iat: number;
   exp: number;
 }
@@ -164,6 +217,28 @@ export async function tryRefreshToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+/** HTTP methods that mutate state and therefore require a CSRF token. */
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+/**
+ * Returns extra headers to add to a mutating request.
+ *
+ * Rules:
+ * - OAuth tokens (`client_id` claim present) are stateless; the backend skips
+ *   CSRF for them, so we don't bother fetching the token.
+ * - All other authenticated requests (OIDC/session, PAT) include the CSRF
+ *   token when available.  For PAT/OAuth Bearer, the backend ignores it; for
+ *   session-cookie auth it is required.
+ */
+async function mutatingHeaders(): Promise<Record<string, string>> {
+  const claims = getTokenClaims();
+  // OAuth tokens are identified by a `client_id` claim — no CSRF needed.
+  if (claims?.client_id) return {};
+
+  const csrf = await getCsrfToken();
+  return csrf ? { "x-csrf-token": csrf } : {};
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
@@ -173,14 +248,21 @@ export async function apiFetch<T>(
     await tryRefreshToken();
   }
 
+  const method = (options.method ?? "GET").toUpperCase();
+  const isMutating = MUTATING_METHODS.has(method);
+  const csrf = isMutating ? await mutatingHeaders() : {};
+
   const token = getAccessToken();
+  const buildHeaders = (t: string | null) => ({
+    "Content-Type": "application/json",
+    ...(t ? { Authorization: `Bearer ${t}` } : {}),
+    ...csrf,
+    ...options.headers,
+  });
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers: buildHeaders(token),
   });
 
   // On a 401 (e.g. clock skew or race), attempt one token refresh then retry.
@@ -190,11 +272,7 @@ export async function apiFetch<T>(
       const retryToken = getAccessToken();
       const retryRes = await fetch(`${API_URL}${path}`, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...(retryToken ? { Authorization: `Bearer ${retryToken}` } : {}),
-          ...options.headers,
-        },
+        headers: buildHeaders(retryToken),
       });
 
       if (!retryRes.ok) {

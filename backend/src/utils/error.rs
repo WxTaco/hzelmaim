@@ -20,8 +20,13 @@ pub enum ApiErrorCode {
     BadRequest,
     ContainerNotFound,
     CommandNotFound,
+    NetworkNotFound,
+    NetworkMemberNotFound,
     NotImplemented,
     InternalError,
+    WebhookNotFound,
+    WebhookDeliveryNotFound,
+    WebhookSignatureInvalid,
 }
 
 /// Standardized API error payload.
@@ -93,12 +98,60 @@ impl ApiError {
         )
     }
 
+    /// Creates a missing private network response.
+    pub fn network_not_found(network_id: impl Into<String>) -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::NetworkNotFound,
+            format!("Network {} was not found", network_id.into()),
+        )
+    }
+
+    /// Creates a missing network membership response.
+    pub fn network_member_not_found(container_id: impl Into<String>) -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::NetworkMemberNotFound,
+            format!(
+                "Container {} is not a member of this network",
+                container_id.into()
+            ),
+        )
+    }
+
     /// Creates an internal server error response.
     pub fn internal(message: impl Into<String>) -> Self {
         Self::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             ApiErrorCode::InternalError,
             message,
+        )
+    }
+
+    /// Creates a missing webhook config response.
+    pub fn webhook_not_found(webhook_id: impl Into<String>) -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::WebhookNotFound,
+            format!("Webhook {} was not found", webhook_id.into()),
+        )
+    }
+
+    /// Creates a missing webhook delivery response.
+    pub fn webhook_delivery_not_found(delivery_id: impl Into<String>) -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            ApiErrorCode::WebhookDeliveryNotFound,
+            format!("Webhook delivery {} was not found", delivery_id.into()),
+        )
+    }
+
+    /// Creates a webhook signature mismatch response.
+    pub fn webhook_signature_invalid() -> Self {
+        Self::new(
+            StatusCode::UNAUTHORIZED,
+            ApiErrorCode::WebhookSignatureInvalid,
+            "Webhook signature is invalid or missing",
         )
     }
 
